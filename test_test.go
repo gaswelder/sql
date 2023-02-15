@@ -174,6 +174,10 @@ func TestQueries(t *testing.T) {
 		{`"t2"."bucket"`: 1},
 		{`"t2"."bucket"`: 2},
 	})
+	check("min", `select year, min(price) from cars group by year`, []map[string]any{
+		{`"cars"."year"`: 2009, "min(price)": 30000},
+		{`"cars"."year"`: 2005, "min(price)": 69000},
+	})
 
 	check("...", `select bucket, x from t2 join t3 on array_contains(array[1,2,3], 1)`, []map[string]any{
 		{"\"t2\".\"bucket\"": 1, `"t3"."x"`: 1},
