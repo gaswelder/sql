@@ -34,6 +34,25 @@ func (data dummy) ColumnNames() []string {
 
 func TestQueries(t *testing.T) {
 	data := map[string]Table{
+		"cars": dummy{
+			data: []map[string]Value{
+				{
+					"name":  Value{String, "BMW Z4 Roadster (II)"},
+					"year":  Value{Int, 2009},
+					"price": Value{Int, 35900},
+				},
+				{
+					"name":  Value{String, "Cadillac SRX"},
+					"year":  Value{Int, 2005},
+					"price": Value{Int, 69000},
+				},
+				{
+					"name":  Value{String, "Kia Soul"},
+					"year":  Value{Int, 2009},
+					"price": Value{Int, 30000},
+				},
+			},
+		},
 		"t1": dummy{
 			data: []map[string]Value{
 				{"id": Value{Int, 1}, "name": Value{String, "one"}},
@@ -107,10 +126,10 @@ func TestQueries(t *testing.T) {
 		})
 	}
 
-	check("simplest projection", `select id from t1`, []map[string]any{
-		{"\"t1\".\"id\"": 1},
-		{"\"t1\".\"id\"": 2},
-		{"\"t1\".\"id\"": 3},
+	check("simplest projection", `select name from cars`, []map[string]any{
+		{"\"cars\".\"name\"": "BMW Z4 Roadster (II)"},
+		{"\"cars\".\"name\"": "Cadillac SRX"},
+		{"\"cars\".\"name\"": "Kia Soul"},
 	})
 	check("quotted field name", `select id, "name" from t1`, []map[string]any{
 		{"\"t1\".\"id\"": 1, "\"t1\".\"name\"": "one"},
