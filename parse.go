@@ -24,12 +24,6 @@ type selector struct {
 	alias string
 }
 
-// columnRef is an expression node that refers to a column.
-type columnRef struct {
-	Table  string
-	Column string
-}
-
 type star struct {
 	//
 }
@@ -38,64 +32,10 @@ func (s star) String() string {
 	return "*"
 }
 
-type fbinaryOr struct {
-	left  expression
-	right expression
-}
-
-type aggregate struct {
-	name string
-}
-
-type feq struct {
-	left  expression
-	right expression
-}
-
-type ValueType int
-
-const (
-	String ValueType = 1 + iota
-	Int
-	Double
-	Bool
-	Array
-	JSON
-)
-
-func tn(t ValueType) string {
-	switch t {
-	case String:
-		return "String"
-	case Int:
-		return "Int"
-	case Double:
-		return "Double"
-	case Bool:
-		return "Bool"
-	case Array:
-		return "Array"
-	case JSON:
-		return "JSON"
-	default:
-		panic(fmt.Errorf("unexpected value type: %d", t))
-	}
-}
-
-type Value struct {
-	Type ValueType
-	Data any
-}
-
 // expression is a node in an SQL expression tree.
 type expression interface {
 	eval(x Row, g []Row) (Value, error)
 	String() string
-}
-
-type functionkek struct {
-	name string
-	args []expression
 }
 
 type joinspec struct {

@@ -80,27 +80,3 @@ func function(name string, args []Value) (Value, error) {
 		return Value{}, fmt.Errorf("unknown function %s", name)
 	}
 }
-
-func eq(a, b Value) (bool, error) {
-	if a.Type != b.Type {
-		return false, fmt.Errorf("can't compare values of different types: %s and %s", tn(a.Type), tn(b.Type))
-	}
-	switch a.Type {
-	case String, Int:
-		return a.Data == b.Data, nil
-	default:
-		return false, fmt.Errorf("eq: don't know how to compare values of type %s", tn(a.Type))
-	}
-}
-
-func (a Value) lessThan(b Value) (bool, error) {
-	if a.Type != b.Type {
-		return false, fmt.Errorf("can't compare values of different types: %s and %s", tn(a.Type), tn(b.Type))
-	}
-	switch a.Type {
-	case Int:
-		return a.Data.(int) < b.Data.(int), nil
-	default:
-		return false, fmt.Errorf("lessThan: don't know how to compare values of type %s", tn(a.Type))
-	}
-}
