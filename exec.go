@@ -108,6 +108,9 @@ func (e Engine) Exec(Q Query) (*RowsStream, error) {
 	// Sort the results
 	if len(Q.OrderBy) > 0 {
 		groupsIt, err = orderRows(groupsIt, Q)
+		if err != nil {
+			return nil, err
+		}
 	}
 
 	// Add a limit
@@ -169,12 +172,6 @@ func project(groupsIt func() ([]Row, error), Q Query) func() (Row, error) {
 					alias = v.String()
 				}
 				groupRow = append(groupRow, Cell{Name: alias, Data: val})
-			case *aggregate:
-				alias := selector.alias
-				if alias == "" {
-					alias = v.String()
-				}
-				groupRow = append(groupRow, Cell{Name: alias, Data: v.eval(rows)})
 			default:
 				return nil, fmt.Errorf("unknown selector: %s %v", reflect.TypeOf(selector), selector)
 			}
@@ -380,23 +377,13 @@ func orderRows(groupsIt func() ([]Row, error), q Query) (func() ([]Row, error), 
 	copy(result, groups)
 	sort.Slice(result, func(i, j int) bool {
 		for _, ordering := range q.OrderBy {
-			var v1, v2 Value
-			var err error
-			switch expr := ordering.expr.(type) {
-			case expression:
-				v1, err = expr.eval(result[i][0], result[i])
-				if err != nil {
-					panic(err)
-				}
-				v2, err = expr.eval(result[j][0], result[i])
-				if err != nil {
-					panic(err)
-				}
-			case *aggregate:
-				v1 = expr.eval(result[i])
-				v2 = expr.eval(result[j])
-			default:
-				panic(fmt.Errorf("unknown type of group by expression: %s", reflect.TypeOf(ordering.expr)))
+			v1, err := ordering.expr.eval(result[i][0], result[i])
+			if err != nil {
+				panic(err)
+			}
+			v2, err := ordering.expr.eval(result[j][0], result[j])
+			if err != nil {
+				panic(err)
 			}
 			if ordering.desc {
 				v1, v2 = v2, v1

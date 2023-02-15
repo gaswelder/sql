@@ -24,14 +24,6 @@ type selector struct {
 	alias string
 }
 
-type star struct {
-	//
-}
-
-func (s star) String() string {
-	return "*"
-}
-
 // expression is a node in an SQL expression tree.
 type expression interface {
 	eval(x Row, g []Row) (Value, error)
@@ -45,7 +37,7 @@ type joinspec struct {
 
 type orderspec struct {
 	desc bool
-	expr any
+	expr expression
 }
 
 type tableName struct {
@@ -143,15 +135,7 @@ func Parse(sqlString string) (Query, error) {
 }
 
 func readOrder(b *tokenizer) orderspec {
-	var expr any
-	var err error
-	count, err := readCount(b)
-	if count != nil {
-		expr = count
-	}
-	if expr == nil && err == nil {
-		expr, err = readExpression(b)
-	}
+	expr, err := readExpression(b)
 	if err != nil {
 		panic(err)
 	}
@@ -165,29 +149,11 @@ func readOrder(b *tokenizer) orderspec {
 	return orderspec{desc, expr}
 }
 
-func readCount(b *tokenizer) (*aggregate, error) {
-	if b.eati(tIdentifier, "count") {
-		if !b.eat(tOp, "(") || !b.eat(tOp, "*") || !b.eat(tOp, ")") {
-			return nil, fmt.Errorf("couldn't parse count expression")
-		}
-		return &aggregate{"count(*)"}, nil
-	}
-	return nil, nil
-}
-
 func readSelector(b *tokenizer) (selector, error) {
 	if b.eat(tOp, "*") {
 		return selector{expr: &star{}, alias: ""}, nil
 	}
-	var expr any
-	var err error
-	count, err := readCount(b)
-	if count != nil {
-		expr = count
-	}
-	if expr == nil && err == nil {
-		expr, err = readExpression(b)
-	}
+	expr, err := readExpression(b)
 	if err != nil {
 		return selector{}, err
 	}
@@ -256,28 +222,6 @@ func readExpr1(b *tokenizer) (expression, error) {
 	return e, nil
 }
 
-func readScalar(b *tokenizer) (*Value, error) {
-	if b.peek().t == tString {
-		s, err := b.next()
-		if err != nil {
-			return nil, err
-		}
-		return &Value{String, s.val}, nil
-	}
-	if b.peek().t == tNumber {
-		s, err := b.next()
-		if err != nil {
-			return nil, err
-		}
-		n, err := strconv.Atoi(s.val)
-		if err != nil {
-			return nil, err
-		}
-		return &Value{Int, n}, nil
-	}
-	return nil, nil
-}
-
 func readExpr0(b *tokenizer) (expression, error) {
 	if scalar, err := readScalar(b); scalar != nil || err != nil {
 		return scalar, err
@@ -320,6 +264,32 @@ func readExpr0(b *tokenizer) (expression, error) {
 		return nil, fmt.Errorf("identifier expected, got %s", name1)
 	}
 
+	if b.peek().t == tOp && b.peek().val == "(" && isAggregate(name1.val) {
+		b.next()
+		args := []expression{}
+		if b.eat(tOp, "*") {
+			args = append(args, &star{})
+			if !b.eat(tOp, ")") {
+				return nil, fmt.Errorf("expecting ) after %s(*", name1.val)
+			}
+		} else {
+			for {
+				e, err := readExpression(b)
+				if err != nil {
+					return nil, err
+				}
+				args = append(args, e)
+				if !b.eat(tOp, ",") {
+					break
+				}
+			}
+			if !b.eat(tOp, ")") {
+				return nil, fmt.Errorf(") expected, got %s", b.peek())
+			}
+		}
+		return &aggregate{name1.val, args}, nil
+	}
+
 	if b.eat(tOp, "(") {
 		args := []expression{}
 		for {
@@ -350,4 +320,26 @@ func readExpr0(b *tokenizer) (expression, error) {
 	}
 
 	return &columnRef{"", name1.val}, nil
+}
+
+func readScalar(b *tokenizer) (*Value, error) {
+	if b.peek().t == tString {
+		s, err := b.next()
+		if err != nil {
+			return nil, err
+		}
+		return &Value{String, s.val}, nil
+	}
+	if b.peek().t == tNumber {
+		s, err := b.next()
+		if err != nil {
+			return nil, err
+		}
+		n, err := strconv.Atoi(s.val)
+		if err != nil {
+			return nil, err
+		}
+		return &Value{Int, n}, nil
+	}
+	return nil, nil
 }

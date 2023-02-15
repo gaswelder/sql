@@ -80,7 +80,17 @@ func traverse(x any, f func(any) error) error {
 			}
 		}
 		return nil
+	case *star:
+		return nil
 	case *aggregate:
+		// if err := f(v); err != nil {
+		// 	return err
+		// }
+		for _, arg := range v.args {
+			if err := traverse(arg, f); err != nil {
+				return err
+			}
+		}
 		return nil
 	default:
 		panic(fmt.Errorf("don't know how to traverse %s", reflect.TypeOf(x)))
