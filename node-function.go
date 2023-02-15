@@ -22,27 +22,6 @@ func (f functionkek) String() string {
 }
 
 func (f functionkek) eval(r Row, group []Row) (Value, error) {
-	if f.name == "min" {
-		min := Value{Int, nil}
-		for i, row := range group {
-			v, err := f.args[0].eval(row, group)
-			if err != nil {
-				return Value{}, err
-			}
-			if i == 0 {
-				min = v
-				continue
-			}
-			less, err := v.lessThan(min)
-			if err != nil {
-				return Value{}, err
-			}
-			if less {
-				min = v
-			}
-		}
-		return min, nil
-	}
 	args := make([]Value, len(f.args))
 	for i, argExpression := range f.args {
 		exprResult, err := argExpression.eval(r, group)
