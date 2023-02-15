@@ -89,7 +89,7 @@ type Value struct {
 
 // expression is a node in an SQL expression tree.
 type expression interface {
-	eval(x Row) (Value, error)
+	eval(x Row, g []Row) (Value, error)
 	String() string
 }
 

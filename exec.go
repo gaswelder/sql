@@ -138,7 +138,7 @@ func filter(Q Query, input func() (Row, error)) func() (Row, error) {
 			if r == nil || err != nil {
 				return r, err
 			}
-			ok, err := Q.Filter.eval(r)
+			ok, err := Q.Filter.eval(r, nil)
 			if err != nil {
 				return nil, errors.Wrap(err, "failed to calculate filter condition")
 			}
@@ -160,7 +160,7 @@ func project(groupsIt func() ([]Row, error), Q Query) func() (Row, error) {
 		for _, selector := range Q.Selectors {
 			switch v := selector.expr.(type) {
 			case expression:
-				val, err := v.eval(exampleRow)
+				val, err := v.eval(exampleRow, rows)
 				if err != nil {
 					return nil, err
 				}
@@ -205,7 +205,7 @@ func groupRows(input func() (Row, error), Q Query) (func() ([]Row, error), error
 	for _, row := range filtered {
 		key := []Value{}
 		for _, e := range Q.GroupBy {
-			ev, err := e.eval(row)
+			ev, err := e.eval(row, nil)
 			if err != nil {
 				panic(err)
 			}
@@ -345,7 +345,7 @@ func joinTablesFilter(xs, ys func() (Row, error), condition expression) func() (
 			if err != nil || r == nil {
 				return r, err
 			}
-			ev, err := condition.eval(r)
+			ev, err := condition.eval(r, nil)
 			if err != nil {
 				return nil, err
 			}
@@ -379,16 +379,16 @@ func orderRows(groupsIt func() ([]Row, error), q Query) (func() ([]Row, error), 
 	result := make([][]Row, len(groups))
 	copy(result, groups)
 	sort.Slice(result, func(i, j int) bool {
-		for _, g := range q.OrderBy {
+		for _, ordering := range q.OrderBy {
 			var v1, v2 Value
 			var err error
-			switch expr := g.expr.(type) {
+			switch expr := ordering.expr.(type) {
 			case expression:
-				v1, err = expr.eval(result[i][0])
+				v1, err = expr.eval(result[i][0], result[i])
 				if err != nil {
 					panic(err)
 				}
-				v2, err = expr.eval(result[j][0])
+				v2, err = expr.eval(result[j][0], result[i])
 				if err != nil {
 					panic(err)
 				}
@@ -396,9 +396,9 @@ func orderRows(groupsIt func() ([]Row, error), q Query) (func() ([]Row, error), 
 				v1 = expr.eval(result[i])
 				v2 = expr.eval(result[j])
 			default:
-				panic(fmt.Errorf("unknown type of group by expression: %s", reflect.TypeOf(g.expr)))
+				panic(fmt.Errorf("unknown type of group by expression: %s", reflect.TypeOf(ordering.expr)))
 			}
-			if g.desc {
+			if ordering.desc {
 				v1, v2 = v2, v1
 			}
 			if v1.Data == v2.Data {
