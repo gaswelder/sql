@@ -95,12 +95,19 @@ func (e Engine) Exec(Q Query) (*RowsStream, error) {
 	}
 
 	// Filter the stream
+	rowsStream := toStream1(input)
 	if Q.Filter != nil {
-		input = filter(Q, input)
+		rowsStream = rowsStream.filter(func(r Row) (bool, error) {
+			ok, err := Q.Filter.eval(r, nil)
+			if err != nil {
+				return false, errors.Wrap(err, "failed to calculate filter condition")
+			}
+			return ok.Data.(bool), nil
+		})
 	}
 
 	// Group the stream
-	groupsStream, err := groupRows(input, Q)
+	groupsStream, err := groupRows(rowsStream, Q)
 	if err != nil {
 		return nil, err
 	}
@@ -117,24 +124,6 @@ func (e Engine) Exec(Q Query) (*RowsStream, error) {
 	// Format the results
 	results := project(groupsStream, Q)
 	return toRowsStream(results), nil
-}
-
-func filter(Q Query, input func() (Row, error)) func() (Row, error) {
-	return func() (Row, error) {
-		for {
-			r, err := input()
-			if r == nil || err != nil {
-				return r, err
-			}
-			ok, err := Q.Filter.eval(r, nil)
-			if err != nil {
-				return nil, errors.Wrap(err, "failed to calculate filter condition")
-			}
-			if ok.Data.(bool) {
-				return r, nil
-			}
-		}
-	}
 }
 
 func project(groupsIt *stream[[]Row], Q Query) *stream[Row] {
@@ -156,16 +145,12 @@ func project(groupsIt *stream[[]Row], Q Query) *stream[Row] {
 	})
 }
 
-func groupRows(input func() (Row, error), Q Query) (*stream[[]Row], error) {
+func groupRows(input *stream[Row], Q Query) (*stream[[]Row], error) {
 	if len(Q.GroupBy) == 0 {
-		s, err := groupByNothing(input, Q)
-		if err != nil {
-			return nil, err
-		}
-		return toStream2(s), nil
+		return groupByNothing(input, Q)
 	}
 
-	filtered, err := consume(input)
+	allRows, err := input.consume()
 	if err != nil {
 		return nil, err
 	}
@@ -179,7 +164,7 @@ func groupRows(input func() (Row, error), Q Query) (*stream[[]Row], error) {
 	}
 	groups := [][]Row{}
 	groupKeys := [][]Value{}
-	for _, row := range filtered {
+	for _, row := range allRows {
 		key := []Value{}
 		for _, e := range Q.GroupBy {
 			ev, err := e.eval(row, nil)
@@ -207,7 +192,7 @@ func groupRows(input func() (Row, error), Q Query) (*stream[[]Row], error) {
 	return arrstream(groups), nil
 }
 
-func groupByNothing(input func() (Row, error), Q Query) (func() ([]Row, error), error) {
+func groupByNothing(input *stream[Row], Q Query) (*stream[[]Row], error) {
 	hasExpressions := false
 	hasAggregates := false
 	for _, x := range Q.Selectors {
@@ -224,28 +209,24 @@ func groupByNothing(input func() (Row, error), Q Query) (func() ([]Row, error), 
 
 	// select id
 	if hasExpressions {
-		return func() ([]Row, error) {
-			r, err := input()
-			if r == nil || err != nil {
-				return nil, err
-			}
+		return conv(input, func(r Row) ([]Row, error) {
 			return []Row{r}, nil
-		}, nil
-
+		}), nil
 	}
 	// select count(*)
 	init := false
-	return func() ([]Row, error) {
-		if init {
-			return nil, nil
-		}
-		init = true
-		rows, err := consume(input)
-		if err != nil {
-			return nil, err
-		}
-		return rows, nil
-	}, nil
+	return &stream[[]Row]{
+		func() ([]Row, bool, error) {
+			if init {
+				return nil, true, nil
+			}
+			init = true
+			rows, err := input.consume()
+			if err != nil {
+				return nil, false, err
+			}
+			return rows, false, nil
+		}}, nil
 }
 
 func concatRows(a, b Row) Row {

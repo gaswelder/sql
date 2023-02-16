@@ -19,6 +19,24 @@ func arrstream[T any](xs []T) *stream[T] {
 	}
 }
 
+func (s *stream[T]) filter(f func(T) (bool, error)) *stream[T] {
+	var t T
+	return &stream[T]{
+		func() (T, bool, error) {
+			for {
+				r, done, err := s.next()
+				if done || err != nil {
+					return t, done, err
+				}
+				ok, err := f(r)
+				if ok {
+					return r, false, nil
+				}
+			}
+		},
+	}
+}
+
 func (s *stream[T]) limit(take int) *stream[T] {
 	i := 0
 	var t T
