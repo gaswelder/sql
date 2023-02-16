@@ -20,7 +20,7 @@ func normalize(q *Query, tables map[string]Table) error {
 			if n == "" {
 				return fmt.Errorf("could not resolve table name '%s'", tbl.Name)
 			}
-			tbl.Name = n
+			// tbl.Name = n
 			tablesMap[n] = true
 		}
 		return nil

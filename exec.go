@@ -4,21 +4,13 @@ import (
 	"fmt"
 	"reflect"
 	"sort"
+	"strings"
 
 	"github.com/pkg/errors"
 )
 
 // Row is a collection of cells.
 type Row []Cell
-
-func (r Row) get(table, name string) Value {
-	for _, cell := range r {
-		if cell.TableName == table && cell.Name == name {
-			return cell.Data
-		}
-	}
-	panic(fmt.Sprintf("couldn't find %s.%s in a row", table, name))
-}
 
 // Cell is single piece of data, always part of a row.
 type Cell struct {
@@ -66,6 +58,22 @@ func (s *RowsStream) Consume() ([]Row, error) {
 	return consume(s.Next)
 }
 
+func findTable(e Engine, name string) (Table, error) {
+	options := []string{}
+	for k := range e.tables {
+		if strings.EqualFold(name, k) {
+			options = append(options, k)
+		}
+	}
+	if len(options) == 0 {
+		return nil, fmt.Errorf("table not found: %s", name)
+	}
+	if len(options) > 1 {
+		return nil, fmt.Errorf("ambiguous table name: %s (%s)", name, strings.Join(options, ", "))
+	}
+	return e.tables[options[0]], nil
+}
+
 // Exec runs the query and returns the results.
 func (e Engine) Exec(Q Query) (*RowsStream, error) {
 	if err := normalize(&Q, e.tables); err != nil {
@@ -75,9 +83,9 @@ func (e Engine) Exec(Q Query) (*RowsStream, error) {
 	// Define the base input
 	var input *stream[Row]
 	if Q.From != nil {
-		table, ok := e.tables[Q.From.Name]
-		if !ok {
-			return nil, fmt.Errorf("table not found: %s", Q.From.Name)
+		table, err := findTable(e, Q.From.Name)
+		if err != nil {
+			return nil, err
 		}
 		input = tablestream(Q.From.Name, table.GetRows())
 	} else {

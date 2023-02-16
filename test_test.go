@@ -136,6 +136,11 @@ func TestQueries(t *testing.T) {
 		{"\"t1\".\"id\"": 2, "\"t1\".\"name\"": "'"},
 		{"\"t1\".\"id\"": 3, "\"t1\".\"name\"": "three"},
 	})
+	check("case-insensitive column and table names", `select ID, Name from T1`, []map[string]any{
+		{"\"t1\".\"id\"": 1, "\"t1\".\"name\"": "one"},
+		{"\"t1\".\"id\"": 2, "\"t1\".\"name\"": "'"},
+		{"\"t1\".\"id\"": 3, "\"t1\".\"name\"": "three"},
+	})
 	check("simplest filter", `select id from t1 where name = '\''`, []map[string]any{
 		{"\"t1\".\"id\"": 2},
 	})
