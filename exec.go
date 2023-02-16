@@ -275,7 +275,7 @@ func joinTables(xs, ys *stream[Row]) *stream[Row] {
 			return
 		}
 		if rightdone {
-			rewind()
+			yss = rewind()
 			right, rightdone, err = yss.next()
 			if err != nil {
 				return

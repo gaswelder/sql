@@ -97,34 +97,19 @@ func consume(it func() (Row, error)) ([]Row, error) {
 	return filtered, nil
 }
 
-func rewindable(xs *stream[Row]) (*stream[Row], func()) {
+func rewindable(xs *stream[Row]) (*stream[Row], func() *stream[Row]) {
 	var items []Row
-	i := 0
-	cached := false
-	rewind := func() {
-		cached = true
-		i = 0
+	rewind := func() *stream[Row] {
+		return arrstream(items)
 	}
 	s := &stream[Row]{
 		func() (Row, bool, error) {
-			if cached {
-				if i >= len(items) {
-					return nil, true, nil
-				}
-				x := items[i]
-				i++
-				return x, false, nil
-			} else {
-				x, done, err := xs.next()
-				if err != nil {
-					return nil, false, err
-				}
-				if done {
-					return nil, true, nil
-				}
-				items = append(items, x)
-				return x, false, nil
+			x, done, err := xs.next()
+			if err != nil || done {
+				return nil, done, err
 			}
+			items = append(items, x)
+			return x, false, nil
 		},
 	}
 	return s, rewind
