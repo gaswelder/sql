@@ -47,6 +47,20 @@ func (s *stream[T]) consume() ([]T, error) {
 	return groups, nil
 }
 
+func conv[T, U any](s *stream[T], f func(T) (U, error)) *stream[U] {
+	var u U
+	return &stream[U]{
+		func() (U, bool, error) {
+			rows, done, err := s.next()
+			if err != nil || done {
+				return u, done, err
+			}
+			val, err := f(rows)
+			return val, false, err
+		},
+	}
+}
+
 func toStream1(f func() (Row, error)) *stream[Row] {
 	return &stream[Row]{
 		func() (Row, bool, error) {

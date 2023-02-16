@@ -138,28 +138,22 @@ func filter(Q Query, input func() (Row, error)) func() (Row, error) {
 }
 
 func project(groupsIt *stream[[]Row], Q Query) *stream[Row] {
-	return &stream[Row]{
-		func() (Row, bool, error) {
-			rows, done, err := groupsIt.next()
-			if err != nil || done {
-				return nil, done, err
+	return conv(groupsIt, func(rows []Row) (Row, error) {
+		exampleRow := rows[0]
+		groupRow := make(Row, 0)
+		for _, selector := range Q.Selectors {
+			val, err := selector.expr.eval(exampleRow, rows)
+			if err != nil {
+				return nil, err
 			}
-			exampleRow := rows[0]
-			groupRow := make(Row, 0)
-			for _, selector := range Q.Selectors {
-				val, err := selector.expr.eval(exampleRow, rows)
-				if err != nil {
-					return nil, false, err
-				}
-				alias := selector.alias
-				if alias == "" {
-					alias = selector.expr.String()
-				}
-				groupRow = append(groupRow, Cell{Name: alias, Data: val})
+			alias := selector.alias
+			if alias == "" {
+				alias = selector.expr.String()
 			}
-			return groupRow, false, nil
-		},
-	}
+			groupRow = append(groupRow, Cell{Name: alias, Data: val})
+		}
+		return groupRow, nil
+	})
 }
 
 func groupRows(input func() (Row, error), Q Query) (*stream[[]Row], error) {
