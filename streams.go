@@ -4,6 +4,21 @@ type stream[T any] struct {
 	next func() (T, bool, error)
 }
 
+func arrstream[T any](xs []T) *stream[T] {
+	var t T
+	i := 0
+	return &stream[T]{
+		func() (T, bool, error) {
+			if i >= len(xs) {
+				return t, true, nil
+			}
+			r := xs[i]
+			i++
+			return r, false, nil
+		},
+	}
+}
+
 func (s *stream[T]) limit(take int) *stream[T] {
 	i := 0
 	var t T
@@ -15,6 +30,21 @@ func (s *stream[T]) limit(take int) *stream[T] {
 			i++
 			return s.next()
 		}}
+}
+
+func (s *stream[T]) consume() ([]T, error) {
+	var groups []T
+	for {
+		r, done, err := s.next()
+		if err != nil {
+			return nil, err
+		}
+		if done {
+			break
+		}
+		groups = append(groups, r)
+	}
+	return groups, nil
 }
 
 func toStream1(f func() (Row, error)) *stream[Row] {

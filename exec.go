@@ -100,21 +100,16 @@ func (e Engine) Exec(Q Query) (*RowsStream, error) {
 	}
 
 	// Group the stream
-	groupsIt, err := groupRows(input, Q)
+	groupsStream, err := groupRows(input, Q)
 	if err != nil {
 		return nil, err
 	}
-
-	// Sort the results
 	if len(Q.OrderBy) > 0 {
-		groupsIt, err = orderRows(groupsIt, Q)
+		groupsStream, err = orderRows(groupsStream, Q)
 		if err != nil {
 			return nil, err
 		}
 	}
-
-	groupsStream := toStream2(groupsIt)
-
 	if Q.Limit.Set {
 		groupsStream = groupsStream.limit(Q.Limit.Value)
 	}
@@ -167,9 +162,13 @@ func project(groupsIt *stream[[]Row], Q Query) *stream[Row] {
 	}
 }
 
-func groupRows(input func() (Row, error), Q Query) (func() ([]Row, error), error) {
+func groupRows(input func() (Row, error), Q Query) (*stream[[]Row], error) {
 	if len(Q.GroupBy) == 0 {
-		return groupByNothing(input, Q)
+		s, err := groupByNothing(input, Q)
+		if err != nil {
+			return nil, err
+		}
+		return toStream2(s), nil
 	}
 
 	filtered, err := consume(input)
@@ -211,15 +210,7 @@ func groupRows(input func() (Row, error), Q Query) (func() ([]Row, error), error
 		}
 		groups[i] = append(groups[i], row)
 	}
-	i := 0
-	return func() ([]Row, error) {
-		if i >= len(groups) {
-			return nil, nil
-		}
-		g := groups[i]
-		i++
-		return g, nil
-	}, nil
+	return arrstream(groups), nil
 }
 
 func groupByNothing(input func() (Row, error), Q Query) (func() ([]Row, error), error) {
@@ -355,8 +346,8 @@ func consumeGroups(groupsIt func() ([]Row, error)) ([][]Row, error) {
 	return groups, nil
 }
 
-func orderRows(groupsIt func() ([]Row, error), q Query) (func() ([]Row, error), error) {
-	groups, err := consumeGroups(groupsIt)
+func orderRows(groupsIt *stream[[]Row], q Query) (*stream[[]Row], error) {
+	groups, err := groupsIt.consume()
 	if err != nil {
 		return nil, err
 	}
@@ -389,13 +380,5 @@ func orderRows(groupsIt func() ([]Row, error), q Query) (func() ([]Row, error), 
 		}
 		return false
 	})
-	i := 0
-	return func() ([]Row, error) {
-		if i >= len(result) {
-			return nil, nil
-		}
-		r := result[i]
-		i++
-		return r, nil
-	}, nil
+	return arrstream(result), nil
 }
