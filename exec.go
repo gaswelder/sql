@@ -72,16 +72,16 @@ func (e Engine) Exec(Q Query) (*RowsStream, error) {
 		return nil, err
 	}
 
-	// Stream the input
-	var input func() (Row, error)
+	// Define the base input
+	var input *stream[Row]
 	if Q.From != nil {
 		table, ok := e.tables[Q.From.Name]
 		if !ok {
 			return nil, fmt.Errorf("table not found: %s", Q.From.Name)
 		}
-		input = tableIter(Q.From.Name, table.GetRows())
+		input = tablestream(Q.From.Name, table.GetRows())
 	} else {
-		input = arrayIterator([]Row{{}})
+		input = arrstream([]Row{{}})
 	}
 
 	// Join other inputs
@@ -90,14 +90,18 @@ func (e Engine) Exec(Q Query) (*RowsStream, error) {
 		if !ok {
 			return nil, fmt.Errorf("table not found: %s", j.Table.Name)
 		}
-		more := tableIter(j.Table.Name, table.GetRows())
-		input = joinTablesFilter(input, more, j.Condition)
+		more := tablestream(j.Table.Name, table.GetRows())
+		input = joinTables(input, more).filter(func(r Row) (bool, error) {
+			ev, err := j.Condition.eval(r, nil)
+			if err != nil {
+				return false, err
+			}
+			return ev.Data.(bool), nil
+		})
 	}
 
-	// Filter the stream
-	rowsStream := toStream1(input)
 	if Q.Filter != nil {
-		rowsStream = rowsStream.filter(func(r Row) (bool, error) {
+		input = input.filter(func(r Row) (bool, error) {
 			ok, err := Q.Filter.eval(r, nil)
 			if err != nil {
 				return false, errors.Wrap(err, "failed to calculate filter condition")
@@ -106,8 +110,11 @@ func (e Engine) Exec(Q Query) (*RowsStream, error) {
 		})
 	}
 
-	// Group the stream
-	groupsStream, err := groupRows(rowsStream, Q)
+	// At this state a stream of rows turns into a strem of row groups.
+	// If the group by clause is present, the groups are formed according to
+	// it. If not, each row is converted to its own group - so that the
+	// projection step could work uniformly.
+	groupsStream, err := groupRows(input, Q)
 	if err != nil {
 		return nil, err
 	}
@@ -243,9 +250,11 @@ func concatRows(a, b Row) Row {
 	return r
 }
 
-func joinTables(xs, ys func() (Row, error)) func() (Row, error) {
+func joinTables(xs, ys *stream[Row]) *stream[Row] {
 	var err error
 	var left, right Row
+	var leftdone bool
+	var rightdone bool
 
 	init := false
 	yss, rewind := rewindable(ys)
@@ -253,72 +262,40 @@ func joinTables(xs, ys func() (Row, error)) func() (Row, error) {
 	advance := func() {
 		if !init {
 			init = true
-			left, err = xs()
+			left, leftdone, err = xs.next()
 		}
 		if err != nil {
 			return
 		}
-		if left == nil {
+		if leftdone {
 			return
 		}
-		right, err = yss()
+		right, rightdone, err = yss.next()
 		if err != nil {
 			return
 		}
-		if right == nil {
+		if rightdone {
 			rewind()
-			right, err = yss()
+			right, rightdone, err = yss.next()
 			if err != nil {
 				return
 			}
-			left, err = xs()
+			left, leftdone, err = xs.next()
 		}
 	}
 
-	return func() (Row, error) {
-		advance()
-		if err != nil {
-			return nil, err
-		}
-		if left == nil || right == nil {
-			return nil, nil
-		}
-		return concatRows(left, right), nil
-	}
-}
-
-func joinTablesFilter(xs, ys func() (Row, error), condition expression) func() (Row, error) {
-	join := joinTables(xs, ys)
-	return func() (Row, error) {
-		for {
-			r, err := join()
-			if err != nil || r == nil {
-				return r, err
-			}
-			ev, err := condition.eval(r, nil)
+	return &stream[Row]{
+		func() (Row, bool, error) {
+			advance()
 			if err != nil {
-				return nil, err
+				return nil, false, err
 			}
-			if ev.Data.(bool) {
-				return r, nil
+			if leftdone || rightdone {
+				return nil, true, nil
 			}
-		}
+			return concatRows(left, right), false, nil
+		},
 	}
-}
-
-func consumeGroups(groupsIt func() ([]Row, error)) ([][]Row, error) {
-	var groups [][]Row
-	for {
-		r, err := groupsIt()
-		if err != nil {
-			return nil, err
-		}
-		if r == nil {
-			break
-		}
-		groups = append(groups, r)
-	}
-	return groups, nil
 }
 
 func orderRows(groupsIt *stream[[]Row], q Query) (*stream[[]Row], error) {

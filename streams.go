@@ -4,21 +4,6 @@ type stream[T any] struct {
 	next func() (T, bool, error)
 }
 
-func arrstream[T any](xs []T) *stream[T] {
-	var t T
-	i := 0
-	return &stream[T]{
-		func() (T, bool, error) {
-			if i >= len(xs) {
-				return t, true, nil
-			}
-			r := xs[i]
-			i++
-			return r, false, nil
-		},
-	}
-}
-
 func (s *stream[T]) filter(f func(T) (bool, error)) *stream[T] {
 	var t T
 	return &stream[T]{
@@ -29,6 +14,9 @@ func (s *stream[T]) filter(f func(T) (bool, error)) *stream[T] {
 					return t, done, err
 				}
 				ok, err := f(r)
+				if err != nil {
+					return r, false, err
+				}
 				if ok {
 					return r, false, nil
 				}
@@ -79,36 +67,6 @@ func conv[T, U any](s *stream[T], f func(T) (U, error)) *stream[U] {
 	}
 }
 
-func toStream1(f func() (Row, error)) *stream[Row] {
-	return &stream[Row]{
-		func() (Row, bool, error) {
-			r, err := f()
-			if err != nil {
-				return nil, false, err
-			}
-			if r == nil {
-				return nil, true, nil
-			}
-			return r, false, nil
-		},
-	}
-}
-
-func toStream2(f func() ([]Row, error)) *stream[[]Row] {
-	return &stream[[]Row]{
-		func() ([]Row, bool, error) {
-			r, err := f()
-			if err != nil {
-				return nil, false, err
-			}
-			if r == nil {
-				return nil, true, nil
-			}
-			return r, false, nil
-		},
-	}
-}
-
 func toRowsStream(s *stream[Row]) *RowsStream {
 	return &RowsStream{
 		func() (Row, error) {
@@ -121,18 +79,6 @@ func toRowsStream(s *stream[Row]) *RowsStream {
 			}
 			return r, nil
 		},
-	}
-}
-
-func arrayIterator(xs []Row) func() (Row, error) {
-	i := 0
-	return func() (Row, error) {
-		if i >= len(xs) {
-			return nil, nil
-		}
-		r := xs[i]
-		i++
-		return r, nil
 	}
 }
 
@@ -151,24 +97,7 @@ func consume(it func() (Row, error)) ([]Row, error) {
 	return filtered, nil
 }
 
-func tableIter(tableName string, s func() (map[string]Value, error)) func() (Row, error) {
-	return func() (Row, error) {
-		row, err := s()
-		if err != nil {
-			return nil, err
-		}
-		if row == nil {
-			return nil, nil
-		}
-		var result []Cell
-		for name, value := range row {
-			result = append(result, Cell{tableName, name, value})
-		}
-		return result, nil
-	}
-}
-
-func rewindable(xs func() (Row, error)) (func() (Row, error), func()) {
+func rewindable(xs *stream[Row]) (*stream[Row], func()) {
 	var items []Row
 	i := 0
 	cached := false
@@ -176,25 +105,61 @@ func rewindable(xs func() (Row, error)) (func() (Row, error), func()) {
 		cached = true
 		i = 0
 	}
-	next := func() (Row, error) {
-		if cached {
-			if i >= len(items) {
-				return nil, nil
+	s := &stream[Row]{
+		func() (Row, bool, error) {
+			if cached {
+				if i >= len(items) {
+					return nil, true, nil
+				}
+				x := items[i]
+				i++
+				return x, false, nil
+			} else {
+				x, done, err := xs.next()
+				if err != nil {
+					return nil, false, err
+				}
+				if done {
+					return nil, true, nil
+				}
+				items = append(items, x)
+				return x, false, nil
 			}
-			x := items[i]
-			i++
-			return x, nil
-		} else {
-			x, err := xs()
-			if err != nil {
-				return nil, err
-			}
-			if x == nil {
-				return nil, nil
-			}
-			items = append(items, x)
-			return x, nil
-		}
+		},
 	}
-	return next, rewind
+	return s, rewind
+}
+
+func tablestream(tableName string, s func() (map[string]Value, error)) *stream[Row] {
+	return &stream[Row]{
+		func() (Row, bool, error) {
+			row, err := s()
+			if err != nil {
+				return nil, false, err
+			}
+			if row == nil {
+				return nil, true, nil
+			}
+			var result []Cell
+			for name, value := range row {
+				result = append(result, Cell{tableName, name, value})
+			}
+			return result, false, nil
+		},
+	}
+}
+
+func arrstream[T any](xs []T) *stream[T] {
+	var t T
+	i := 0
+	return &stream[T]{
+		func() (T, bool, error) {
+			if i >= len(xs) {
+				return t, true, nil
+			}
+			r := xs[i]
+			i++
+			return r, false, nil
+		},
+	}
 }
