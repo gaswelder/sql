@@ -152,20 +152,15 @@ func project(groupsIt *stream[[]Row], Q Query) *stream[Row] {
 			exampleRow := rows[0]
 			groupRow := make(Row, 0)
 			for _, selector := range Q.Selectors {
-				switch v := selector.expr.(type) {
-				case expression:
-					val, err := v.eval(exampleRow, rows)
-					if err != nil {
-						return nil, false, err
-					}
-					alias := selector.alias
-					if alias == "" {
-						alias = v.String()
-					}
-					groupRow = append(groupRow, Cell{Name: alias, Data: val})
-				default:
-					return nil, false, fmt.Errorf("unknown selector: %s %v", reflect.TypeOf(selector), selector)
+				val, err := selector.expr.eval(exampleRow, rows)
+				if err != nil {
+					return nil, false, err
 				}
+				alias := selector.alias
+				if alias == "" {
+					alias = selector.expr.String()
+				}
+				groupRow = append(groupRow, Cell{Name: alias, Data: val})
 			}
 			return groupRow, false, nil
 		},

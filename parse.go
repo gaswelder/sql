@@ -20,7 +20,7 @@ type Query struct {
 }
 
 type selector struct {
-	expr  any
+	expr  expression
 	alias string
 }
 
