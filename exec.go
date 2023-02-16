@@ -113,25 +113,15 @@ func (e Engine) Exec(Q Query) (*RowsStream, error) {
 		}
 	}
 
-	// Add a limit
+	groupsStream := toStream2(groupsIt)
+
 	if Q.Limit.Set {
-		groupsIt = limit(groupsIt, Q.Limit.Value)
+		groupsStream = groupsStream.limit(Q.Limit.Value)
 	}
 
 	// Format the results
-	results := project(groupsIt, Q)
-	return &RowsStream{results}, nil
-}
-
-func limit(input func() ([]Row, error), take int) func() ([]Row, error) {
-	i := 0
-	return func() ([]Row, error) {
-		if i >= take {
-			return nil, nil
-		}
-		i++
-		return input()
-	}
+	results := project(groupsStream, Q)
+	return toRowsStream(results), nil
 }
 
 func filter(Q Query, input func() (Row, error)) func() (Row, error) {
@@ -152,31 +142,33 @@ func filter(Q Query, input func() (Row, error)) func() (Row, error) {
 	}
 }
 
-func project(groupsIt func() ([]Row, error), Q Query) func() (Row, error) {
-	return func() (Row, error) {
-		rows, err := groupsIt()
-		if rows == nil || err != nil {
-			return nil, err
-		}
-		exampleRow := rows[0]
-		groupRow := make(Row, 0)
-		for _, selector := range Q.Selectors {
-			switch v := selector.expr.(type) {
-			case expression:
-				val, err := v.eval(exampleRow, rows)
-				if err != nil {
-					return nil, err
-				}
-				alias := selector.alias
-				if alias == "" {
-					alias = v.String()
-				}
-				groupRow = append(groupRow, Cell{Name: alias, Data: val})
-			default:
-				return nil, fmt.Errorf("unknown selector: %s %v", reflect.TypeOf(selector), selector)
+func project(groupsIt *stream[[]Row], Q Query) *stream[Row] {
+	return &stream[Row]{
+		func() (Row, bool, error) {
+			rows, done, err := groupsIt.next()
+			if err != nil || done {
+				return nil, done, err
 			}
-		}
-		return groupRow, nil
+			exampleRow := rows[0]
+			groupRow := make(Row, 0)
+			for _, selector := range Q.Selectors {
+				switch v := selector.expr.(type) {
+				case expression:
+					val, err := v.eval(exampleRow, rows)
+					if err != nil {
+						return nil, false, err
+					}
+					alias := selector.alias
+					if alias == "" {
+						alias = v.String()
+					}
+					groupRow = append(groupRow, Cell{Name: alias, Data: val})
+				default:
+					return nil, false, fmt.Errorf("unknown selector: %s %v", reflect.TypeOf(selector), selector)
+				}
+			}
+			return groupRow, false, nil
+		},
 	}
 }
 

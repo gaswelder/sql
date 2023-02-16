@@ -1,5 +1,67 @@
 package sql
 
+type stream[T any] struct {
+	next func() (T, bool, error)
+}
+
+func (s *stream[T]) limit(take int) *stream[T] {
+	i := 0
+	var t T
+	return &stream[T]{
+		func() (T, bool, error) {
+			if i >= take {
+				return t, true, nil
+			}
+			i++
+			return s.next()
+		}}
+}
+
+func toStream1(f func() (Row, error)) *stream[Row] {
+	return &stream[Row]{
+		func() (Row, bool, error) {
+			r, err := f()
+			if err != nil {
+				return nil, false, err
+			}
+			if r == nil {
+				return nil, true, nil
+			}
+			return r, false, nil
+		},
+	}
+}
+
+func toStream2(f func() ([]Row, error)) *stream[[]Row] {
+	return &stream[[]Row]{
+		func() ([]Row, bool, error) {
+			r, err := f()
+			if err != nil {
+				return nil, false, err
+			}
+			if r == nil {
+				return nil, true, nil
+			}
+			return r, false, nil
+		},
+	}
+}
+
+func toRowsStream(s *stream[Row]) *RowsStream {
+	return &RowsStream{
+		func() (Row, error) {
+			r, done, err := s.next()
+			if err != nil {
+				return nil, err
+			}
+			if done {
+				return nil, nil
+			}
+			return r, nil
+		},
+	}
+}
+
 func arrayIterator(xs []Row) func() (Row, error) {
 	i := 0
 	return func() (Row, error) {
