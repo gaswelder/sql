@@ -36,12 +36,12 @@ func main() {
 				}
 			}
 			m[n] = c.Data.Data
-			data, err := json.Marshal(m)
-			if err != nil {
-				panic(err)
-			}
-			fmt.Println(string(data))
 		}
+		data, err := json.Marshal(m)
+		if err != nil {
+			panic(err)
+		}
+		fmt.Println(string(data))
 	}
 
 }

@@ -314,14 +314,11 @@ func orderRows(groupsIt *Stream[[]Row], q Query) (*Stream[[]Row], error) {
 			if v1.Data == v2.Data {
 				continue
 			}
-			switch a := v1.Data.(type) {
-			case int:
-				return a < v2.Data.(int)
-			case string:
-				return a < v2.Data.(string)
-			default:
-				panic(fmt.Errorf("don't know how to compare %s %v", reflect.TypeOf(v1.Data), v1.Data))
+			less, err := v1.lessThan(v2)
+			if err != nil {
+				panic(err)
 			}
+			return less
 		}
 		return false
 	})
