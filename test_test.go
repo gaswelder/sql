@@ -155,6 +155,16 @@ func TestQueries(t *testing.T) {
 		{`"year"`: 2005},
 		{`"year"`: 2009},
 	})
+	check("nulls last asc", `select name, weight from cars order by weight`, []map[string]any{
+		{`"name"`: "Cadillac SRX", `"weight"`: 1950},
+		{`"name"`: "BMW Z4 Roadster (II)", `"weight"`: nil},
+		{`"name"`: "Kia Soul", `"weight"`: nil},
+	})
+	check("nulls last desc", `select name, weight from cars order by weight desc`, []map[string]any{
+		{`"name"`: "Cadillac SRX", `"weight"`: 1950},
+		{`"name"`: "BMW Z4 Roadster (II)", `"weight"`: nil},
+		{`"name"`: "Kia Soul", `"weight"`: nil},
+	})
 }
 
 func rowsAsJSON(rr []Row) []map[string]any {
