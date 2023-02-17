@@ -8,17 +8,15 @@ import (
 	"github.com/google/go-cmp/cmp"
 )
 
-type dummy struct {
-	data []map[string]Value
-}
+type dummy []map[string]Value
 
 func (data dummy) GetRows() func() (map[string]Value, error) {
 	i := 0
 	return func() (map[string]Value, error) {
-		if i >= len(data.data) {
+		if i >= len(data) {
 			return nil, nil
 		}
-		item := data.data[i]
+		item := data[i]
 		i++
 		return item, nil
 	}
@@ -26,7 +24,7 @@ func (data dummy) GetRows() func() (map[string]Value, error) {
 
 func (data dummy) ColumnNames() []string {
 	var s []string
-	for k := range data.data[0] {
+	for k := range data[0] {
 		s = append(s, k)
 	}
 	return s
@@ -35,48 +33,38 @@ func (data dummy) ColumnNames() []string {
 func TestQueries(t *testing.T) {
 	data := map[string]Table{
 		"cars": dummy{
-			data: []map[string]Value{
-				{
-					"name":  Value{String, "BMW Z4 Roadster (II)"},
-					"year":  Value{Int, 2009},
-					"price": Value{Int, 35900},
-				},
-				{
-					"name":  Value{String, "Cadillac SRX"},
-					"year":  Value{Int, 2005},
-					"price": Value{Int, 69000},
-				},
-				{
-					"name":  Value{String, "Kia Soul"},
-					"year":  Value{Int, 2009},
-					"price": Value{Int, 30000},
-				},
+			{
+				"name":  Value{String, "BMW Z4 Roadster (II)"},
+				"year":  Value{Int, 2009},
+				"price": Value{Int, 35900},
+			},
+			{
+				"name":  Value{String, "Cadillac SRX"},
+				"year":  Value{Int, 2005},
+				"price": Value{Int, 69000},
+			},
+			{
+				"name":  Value{String, "Kia Soul"},
+				"year":  Value{Int, 2009},
+				"price": Value{Int, 30000},
 			},
 		},
 		"t1": dummy{
-			data: []map[string]Value{
-				{"id": Value{Int, 1}, "name": Value{String, "one"}},
-				{"id": Value{Int, 2}, "name": Value{String, "'"}},
-				{"id": Value{Int, 3}, "name": Value{String, "three"}},
-			},
+			{"id": Value{Int, 1}, "name": Value{String, "one"}},
+			{"id": Value{Int, 2}, "name": Value{String, "'"}},
+			{"id": Value{Int, 3}, "name": Value{String, "three"}},
 		},
 		"t2": dummy{
-			data: []map[string]Value{
-				{"bucket": Value{Int, 1}},
-				{"bucket": Value{Int, 2}},
-				{"bucket": Value{Int, 2}},
-			},
+			{"bucket": Value{Int, 1}},
+			{"bucket": Value{Int, 2}},
+			{"bucket": Value{Int, 2}},
 		},
 		"t3": dummy{
-			data: []map[string]Value{
-				{"x": Value{Int, 1}},
-				{"x": Value{Int, 2}},
-			},
+			{"x": Value{Int, 1}},
+			{"x": Value{Int, 2}},
 		},
 		"a-b": dummy{
-			data: []map[string]Value{
-				{"x": Value{Int, 1}},
-			},
+			{"x": Value{Int, 1}},
 		},
 	}
 
