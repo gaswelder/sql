@@ -6,8 +6,8 @@ import (
 )
 
 func normalize(q *Query, tables map[string]Table) error {
-	// First normalize table names
-	tablesMap := map[string]bool{}
+	// Collect table names used in the query.
+	tablesInUse := []string{}
 	err := traverse(q, func(node any) error {
 		if tbl, ok := node.(*tableName); ok {
 			if tbl == nil {
@@ -20,8 +20,7 @@ func normalize(q *Query, tables map[string]Table) error {
 			if n == "" {
 				return fmt.Errorf("could not resolve table name '%s'", tbl.Name)
 			}
-			// tbl.Name = n
-			tablesMap[n] = true
+			tablesInUse = append(tablesInUse, n)
 		}
 		return nil
 	})
@@ -34,7 +33,7 @@ func normalize(q *Query, tables map[string]Table) error {
 	q.Selectors = []selector{}
 	for _, s := range selects {
 		if _, ok := s.expr.(*star); ok {
-			for tbl := range tablesMap {
+			for _, tbl := range tablesInUse {
 				table := tables[tbl]
 				for _, col := range table.ColumnNames() {
 					q.Selectors = append(q.Selectors, selector{expr: &columnRef{tbl, col}})
@@ -44,26 +43,7 @@ func normalize(q *Query, tables map[string]Table) error {
 		}
 		q.Selectors = append(q.Selectors, s)
 	}
-
-	// Normalize column refs using normalized table names as hints.
-	var possibleTables []string
-	for k := range tablesMap {
-		possibleTables = append(possibleTables, k)
-	}
-	return traverse(q, func(node any) error {
-		if ref, ok := node.(*columnRef); ok {
-			t, f, err := canonicalColumnName(tables, ref.Table, ref.Column, possibleTables)
-			if err != nil {
-				return err
-			}
-			if t == "" || f == "" {
-				return fmt.Errorf("could not resolve column %s", ref.String())
-			}
-			ref.Table = t
-			ref.Column = f
-		}
-		return nil
-	})
+	return nil
 }
 
 func canonicalTableName(tables map[string]Table, tbl string) (string, error) {

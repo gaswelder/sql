@@ -127,38 +127,38 @@ func TestQueries(t *testing.T) {
 	}
 
 	check("simplest projection", `select name from cars`, []map[string]any{
-		{"\"cars\".\"name\"": "BMW Z4 Roadster (II)"},
-		{"\"cars\".\"name\"": "Cadillac SRX"},
-		{"\"cars\".\"name\"": "Kia Soul"},
+		{"\"name\"": "BMW Z4 Roadster (II)"},
+		{"\"name\"": "Cadillac SRX"},
+		{"\"name\"": "Kia Soul"},
 	})
 	check("quotted field name", `select id, "name" from t1`, []map[string]any{
-		{"\"t1\".\"id\"": 1, "\"t1\".\"name\"": "one"},
-		{"\"t1\".\"id\"": 2, "\"t1\".\"name\"": "'"},
-		{"\"t1\".\"id\"": 3, "\"t1\".\"name\"": "three"},
+		{"\"id\"": 1, "\"name\"": "one"},
+		{"\"id\"": 2, "\"name\"": "'"},
+		{"\"id\"": 3, "\"name\"": "three"},
 	})
 	check("case-insensitive column and table names", `select ID, Name from T1`, []map[string]any{
-		{"\"t1\".\"id\"": 1, "\"t1\".\"name\"": "one"},
-		{"\"t1\".\"id\"": 2, "\"t1\".\"name\"": "'"},
-		{"\"t1\".\"id\"": 3, "\"t1\".\"name\"": "three"},
+		{`"ID"`: 1, `"Name"`: "one"},
+		{`"ID"`: 2, `"Name"`: "'"},
+		{`"ID"`: 3, `"Name"`: "three"},
 	})
 	check("simplest filter", `select id from t1 where name = '\''`, []map[string]any{
-		{"\"t1\".\"id\"": 2},
+		{"\"id\"": 2},
 	})
 	check("simplest count", `select count(*) from t1`, []map[string]any{
 		{"count(*)": 3},
 	})
 	check("simplest order", `select id from t1 order by id desc`, []map[string]any{
-		{"\"t1\".\"id\"": 3},
-		{"\"t1\".\"id\"": 2},
-		{"\"t1\".\"id\"": 1},
+		{"\"id\"": 3},
+		{"\"id\"": 2},
+		{"\"id\"": 1},
 	})
 	check("order with limit", `select id from t1 order by "id" desc limit 1`, []map[string]any{
-		{`"t1"."id"`: 3},
+		{`"id"`: 3},
 	})
 	check("simplest star", `select * from t1`, []map[string]any{
-		{"\"t1\".\"id\"": 1, "\"t1\".\"name\"": "one"},
-		{"\"t1\".\"id\"": 2, "\"t1\".\"name\"": "'"},
-		{"\"t1\".\"id\"": 3, "\"t1\".\"name\"": "three"},
+		{`"t1"."id"`: 1, `"t1"."name"`: "one"},
+		{`"t1"."id"`: 2, `"t1"."name"`: "'"},
+		{`"t1"."id"`: 3, `"t1"."name"`: "three"},
 	})
 	check("star with join", `select * from t1 join t2 on id = bucket`, []map[string]any{
 		{`"t1"."id"`: 1, `"t1"."name"`: "one", `"t2"."bucket"`: 1},
@@ -166,34 +166,34 @@ func TestQueries(t *testing.T) {
 		{`"t1"."id"`: 2, `"t1"."name"`: "'", `"t2"."bucket"`: 2},
 	})
 	check("funky table name", `select * from "a-b"`, []map[string]any{
-		{"\"a-b\".\"x\"": 1},
+		{`"a-b"."x"`: 1},
 	})
 	check("bare select", `select 1`, []map[string]any{
 		{"1": 1},
 	})
 	check("group", `select bucket, count(*) from t2 group by bucket order by count(*) desc`, []map[string]any{
-		{`"t2"."bucket"`: 2, "count(*)": 2},
-		{`"t2"."bucket"`: 1, "count(*)": 1},
+		{`"bucket"`: 2, "count(*)": 2},
+		{`"bucket"`: 1, "count(*)": 1},
 	})
 	check("limit", `select bucket from t2 limit 2`, []map[string]any{
-		{`"t2"."bucket"`: 1},
-		{`"t2"."bucket"`: 2},
+		{`"bucket"`: 1},
+		{`"bucket"`: 2},
 	})
 	check("min", `select year, min(price) from cars group by year`, []map[string]any{
-		{`"cars"."year"`: 2009, `min("cars"."price")`: 30000},
-		{`"cars"."year"`: 2005, `min("cars"."price")`: 69000},
+		{`"year"`: 2009, `min("price")`: 30000},
+		{`"year"`: 2005, `min("price")`: 69000},
 	})
 
 	check("...", `select bucket, x from t2 join t3 on array_contains(array[1,2,3], 1)`, []map[string]any{
-		{"\"t2\".\"bucket\"": 1, `"t3"."x"`: 1},
-		{"\"t2\".\"bucket\"": 1, `"t3"."x"`: 2},
-		{"\"t2\".\"bucket\"": 2, `"t3"."x"`: 1},
-		{"\"t2\".\"bucket\"": 2, `"t3"."x"`: 2},
-		{"\"t2\".\"bucket\"": 2, `"t3"."x"`: 1},
-		{"\"t2\".\"bucket\"": 2, `"t3"."x"`: 2},
+		{"\"bucket\"": 1, `"x"`: 1},
+		{"\"bucket\"": 1, `"x"`: 2},
+		{"\"bucket\"": 2, `"x"`: 1},
+		{"\"bucket\"": 2, `"x"`: 2},
+		{"\"bucket\"": 2, `"x"`: 1},
+		{"\"bucket\"": 2, `"x"`: 2},
 	})
 	check("order by count", `select "bucket", count(*) from t2 group by "bucket" order by count(*) desc limit 1`, []map[string]any{
-		{`"t2"."bucket"`: 2, "count(*)": 2},
+		{`"bucket"`: 2, "count(*)": 2},
 	})
 	check("simplest alias", `select "bucket" as b from t2`, []map[string]any{
 		{`b`: 1},
