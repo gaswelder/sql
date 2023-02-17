@@ -47,7 +47,7 @@ func (tr *tokenizer) peek() token {
 }
 
 var operators = []string{
-	"=", "*", ".", "[", "]", "(", ")", ",",
+	"=", "*", ".", "[", "]", "(", ")", ",", "<", ">",
 }
 var keywords = []string{
 	"select", "as", "from", "join", "on", "where", "order", "group", "by", "limit",

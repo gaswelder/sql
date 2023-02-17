@@ -32,7 +32,7 @@ func traverse(x any, f func(any) error) error {
 			return err
 		}
 		return nil
-	case *feq:
+	case *binaryOperatorNode:
 		if err := f(v); err != nil {
 			return err
 		}

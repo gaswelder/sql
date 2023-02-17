@@ -5,12 +5,13 @@ import (
 	"fmt"
 )
 
-type feq struct {
+type binaryOperatorNode struct {
+	op    string
 	left  expression
 	right expression
 }
 
-func (e feq) eval(x Row, group []Row) (Value, error) {
+func (e binaryOperatorNode) eval(x Row, group []Row) (Value, error) {
 	a, err := e.left.eval(x, group)
 	if err != nil {
 		return Value{}, err
@@ -19,10 +20,21 @@ func (e feq) eval(x Row, group []Row) (Value, error) {
 	if err != nil {
 		return Value{}, err
 	}
-	return Value{Bool, a.Data == b.Data}, nil
+	var r bool
+	switch e.op {
+	case "=":
+		r, err = a.eq(b)
+	case ">":
+		r, err = a.greaterThan(b)
+	case "<":
+		r, err = a.lessThan(b)
+	default:
+		return Value{}, fmt.Errorf("unsupported binary operator: %s", e.op)
+	}
+	return Value{Bool, r}, err
 }
 
-func (e feq) String() string {
+func (e binaryOperatorNode) String() string {
 	return fmt.Sprintf("%s = %s", e.left.String(), e.right.String())
 }
 

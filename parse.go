@@ -233,12 +233,14 @@ func readExpr1(b *tokenizer) (expression, error) {
 	if err != nil {
 		return nil, err
 	}
-	if b.eat(tOp, "=") {
-		e2, err := readExpr0(b)
-		if err != nil {
-			return nil, err
+	for _, op := range []string{"=", "<", ">"} {
+		if b.eat(tOp, op) {
+			e2, err := readExpr0(b)
+			if err != nil {
+				return nil, err
+			}
+			return &binaryOperatorNode{op, e, e2}, nil
 		}
-		e = &feq{e, e2}
 	}
 	return e, nil
 }

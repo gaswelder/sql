@@ -17,7 +17,7 @@ func function(name string, args []Value) (Value, error) {
 		array := args[0]
 		item := args[1]
 		for _, x := range array.Data.([]Value) {
-			e, err := eq(x, item)
+			e, err := x.eq(item)
 			if err != nil {
 				return Value{Bool, false}, err
 			}

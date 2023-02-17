@@ -46,7 +46,7 @@ func (e Value) String() string {
 	return fmt.Sprintf("%v", e.Data)
 }
 
-func eq(a, b Value) (bool, error) {
+func (a Value) eq(b Value) (bool, error) {
 	if a.Type != b.Type {
 		return false, fmt.Errorf("can't compare values of different types: %s and %s", tn(a.Type), tn(b.Type))
 	}
@@ -73,4 +73,13 @@ func (a Value) lessThan(b Value) (bool, error) {
 	default:
 		return false, fmt.Errorf("lessThan: don't know how to compare values of type %s", tn(a.Type))
 	}
+}
+
+func (a Value) greaterThan(b Value) (bool, error) {
+	eq, err := a.eq(b)
+	if err != nil || eq {
+		return false, err
+	}
+	lt, err := a.lessThan(b)
+	return !lt, err
 }
