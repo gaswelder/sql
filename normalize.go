@@ -62,28 +62,6 @@ func canonicalTableName(tables map[string]Table, tbl string) (string, error) {
 	return matches[0], nil
 }
 
-func canonicalColumnName(tables map[string]Table, tbl, col string, possibleTables []string) (string, string, error) {
-	var matches = [][2]string{}
-	for _, t := range possibleTables {
-		if tbl != "" && !idMatch(t, tbl) {
-			continue
-		}
-		possibleColumns := tables[t].ColumnNames()
-		for _, c := range possibleColumns {
-			if idMatch(c, col) {
-				matches = append(matches, [2]string{t, c})
-			}
-		}
-	}
-	if len(matches) == 0 {
-		return tbl, col, fmt.Errorf("couldn't find table and column that match %s.%s", tbl, col)
-	}
-	if len(matches) > 1 {
-		return tbl, col, fmt.Errorf("ambiguous reference %s.%s: %v", tbl, col, matches)
-	}
-	return matches[0][0], matches[0][1], nil
-}
-
 func idMatch(full, x string) bool {
 	if strings.Contains(full, "/") {
 		return nsMatch(full, x)
