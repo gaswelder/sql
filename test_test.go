@@ -154,9 +154,9 @@ func TestQueries(t *testing.T) {
 	check("filter", `select year from cars where year < 2009`, []map[string]any{
 		{`"year"`: 2005},
 	})
-	// check("filter with nulls", `select year from cars where year < 2009`, []map[string]any{
-	// 	{`"year"`: 2005},
-	// })
+	check("filter with nulls", `select weight from cars where weight < 2000`, []map[string]any{
+		{`"weight"`: 1950},
+	})
 }
 
 func rowsAsJSON(rr []Row) []map[string]any {
