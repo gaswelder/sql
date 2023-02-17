@@ -1,6 +1,7 @@
 package main
 
 import (
+	"encoding/json"
 	"fmt"
 	"log"
 	"os"
@@ -19,10 +20,28 @@ func main() {
 	if err != nil {
 		log.Fatal(err)
 	}
+
 	for _, r := range rows {
+		m := map[string]any{}
 		for _, c := range r {
-			fmt.Printf("%s = %s\n", c.Name, c.Data.String())
+			n := c.Name
+			if _, ok := m[n]; ok {
+				i := 0
+				for {
+					i++
+					n = fmt.Sprintf("%s_%d", c.Name, i)
+					if _, ok := m[n]; !ok {
+						break
+					}
+				}
+			}
+			m[n] = c.Data.Data
+			data, err := json.Marshal(m)
+			if err != nil {
+				panic(err)
+			}
+			fmt.Println(string(data))
 		}
-		fmt.Printf("---------------\n")
 	}
+
 }
