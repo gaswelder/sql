@@ -106,17 +106,17 @@ func TestQueries(t *testing.T) {
 		{`"id"`: 3},
 	})
 	check("simplest star", `select * from t1`, []map[string]any{
-		{`"t1"."id"`: 1, `"t1"."name"`: "one"},
-		{`"t1"."id"`: 2, `"t1"."name"`: "'"},
-		{`"t1"."id"`: 3, `"t1"."name"`: "three"},
+		{`id`: 1, `name`: "one"},
+		{`id`: 2, `name`: "'"},
+		{`id`: 3, `name`: "three"},
 	})
 	check("star with join", `select * from t1 join t2 on id = bucket`, []map[string]any{
-		{`"t1"."id"`: 1, `"t1"."name"`: "one", `"t2"."bucket"`: 1},
-		{`"t1"."id"`: 2, `"t1"."name"`: "'", `"t2"."bucket"`: 2},
-		{`"t1"."id"`: 2, `"t1"."name"`: "'", `"t2"."bucket"`: 2},
+		{`id`: 1, `name`: "one", `bucket`: 1},
+		{`id`: 2, `name`: "'", `bucket`: 2},
+		{`id`: 2, `name`: "'", `bucket`: 2},
 	})
 	check("funky table name", `select * from "a-b"`, []map[string]any{
-		{`"a-b"."x"`: 1},
+		{`x`: 1},
 	})
 	check("bare select", `select 1`, []map[string]any{
 		{"1": 1},
@@ -150,11 +150,11 @@ func TestQueries(t *testing.T) {
 		{`b`: 2},
 		{`b`: 2},
 	})
-	// check("subquery", `select * from (select year from cars)`, []map[string]any{
-	// 	{`"year"`: 2009},
-	// 	{`"year"`: 2005},
-	// 	{`"year"`: 2009},
-	// })
+	check("subquery", `select * from (select year from cars)`, []map[string]any{
+		{`"year"`: 2009},
+		{`"year"`: 2005},
+		{`"year"`: 2009},
+	})
 }
 
 func rowsAsJSON(rr []Row) []map[string]any {

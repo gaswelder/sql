@@ -333,9 +333,10 @@ func project(groupsStream *Stream[[]Row], Q Query) *Stream[Row] {
 		exampleRow := rows[0]
 		groupRow := make(Row, 0)
 		for _, selector := range Q.Selectors {
+			// Expand star selectors with full rows
 			if _, ok := selector.expr.(*star); ok {
 				for _, c := range exampleRow {
-					groupRow = append(groupRow, Cell{Name: fmt.Sprintf(`"%s"."%s"`, c.TableName, c.Name), Data: c.Data})
+					groupRow = append(groupRow, Cell{Name: c.Name, Data: c.Data})
 				}
 				continue
 			}
