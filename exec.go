@@ -291,8 +291,8 @@ func joinTables(xs, ys *Stream[Row]) *Stream[Row] {
 	}
 }
 
-func orderRows(groupsIt *Stream[[]Row], q Query) (*Stream[[]Row], error) {
-	groups, err := groupsIt.Consume()
+func orderRows(s *Stream[[]Row], q Query) (*Stream[[]Row], error) {
+	groups, err := s.Consume()
 	if err != nil {
 		return nil, err
 	}
@@ -308,15 +308,21 @@ func orderRows(groupsIt *Stream[[]Row], q Query) (*Stream[[]Row], error) {
 			if err != nil {
 				panic(err)
 			}
-			if ordering.desc {
-				v1, v2 = v2, v1
-			}
 			if v1.Data == v2.Data {
 				continue
+			}
+			if v1.Data == nil {
+				return false
+			}
+			if v2.Data == nil {
+				return true
 			}
 			less, err := v1.lessThan(v2)
 			if err != nil {
 				panic(err)
+			}
+			if ordering.desc {
+				return !less
 			}
 			return less
 		}

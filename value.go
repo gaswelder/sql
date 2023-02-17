@@ -62,14 +62,8 @@ func (a Value) lessThan(b Value) (bool, error) {
 	if a.Type != b.Type {
 		return false, fmt.Errorf("can't compare values of different types: %s and %s", tn(a.Type), tn(b.Type))
 	}
-	if a.Data == nil && b.Data == nil {
+	if a.Data == nil || b.Data == nil {
 		return false, nil
-	}
-	if a.Data == nil {
-		return false, nil
-	}
-	if b.Data == nil {
-		return true, nil
 	}
 	switch a.Type {
 	case Int:
