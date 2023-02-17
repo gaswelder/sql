@@ -71,6 +71,9 @@ func (e Engine) Exec(Q Query) (*Stream[Row], error) {
 	if err := normalize(&Q, e.tables); err != nil {
 		return nil, err
 	}
+	if len(Q.Selectors) == 0 {
+		return nil, fmt.Errorf("empty selectors list")
+	}
 
 	// Define the base input
 	var input *Stream[Row]
@@ -140,8 +143,8 @@ func (e Engine) Exec(Q Query) (*Stream[Row], error) {
 	return project(groupsStream, Q), nil
 }
 
-func project(groupsIt *Stream[[]Row], Q Query) *Stream[Row] {
-	return conv(groupsIt, func(rows []Row) (Row, error) {
+func project(groupsStream *Stream[[]Row], Q Query) *Stream[Row] {
+	return conv(groupsStream, func(rows []Row) (Row, error) {
 		exampleRow := rows[0]
 		groupRow := make(Row, 0)
 		for _, selector := range Q.Selectors {
@@ -210,12 +213,16 @@ func groupByNothing(input *Stream[Row], Q Query) (*Stream[[]Row], error) {
 	hasExpressions := false
 	hasAggregates := false
 	for _, x := range Q.Selectors {
-		if _, ok := x.expr.(*aggregate); ok {
+		switch x.expr.(type) {
+		case *aggregate:
 			hasAggregates = true
-		} else {
+		case *columnRef, *functionkek, *Value:
 			hasExpressions = true
+		default:
+			panic(fmt.Errorf("unhandled switch case: %s", reflect.TypeOf(x.expr)))
 		}
 	}
+
 	// select id, count(*)
 	if hasExpressions && hasAggregates {
 		return nil, fmt.Errorf("can't use field expressions with aggregations without group by")
@@ -230,6 +237,7 @@ func groupByNothing(input *Stream[Row], Q Query) (*Stream[[]Row], error) {
 	// select count(*)
 	init := false
 	return &Stream[[]Row]{
+		"all rows as one group " + FormatQuery(Q),
 		func() ([]Row, bool, error) {
 			if init {
 				return nil, true, nil
@@ -292,6 +300,7 @@ func joinTables(xs, ys *Stream[Row]) *Stream[Row] {
 	}
 
 	return &Stream[Row]{
+		fmt.Sprintf("join(%s,%s)", xs.name, ys.name),
 		func() (Row, bool, error) {
 			advance()
 			if err != nil {

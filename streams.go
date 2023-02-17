@@ -1,12 +1,38 @@
 package main
 
+import (
+	"fmt"
+	"strings"
+)
+
 type Stream[T any] struct {
-	next func() (T, bool, error)
+	name string
+	gen  func() (T, bool, error)
+}
+
+func (s *Stream[T]) next() (T, bool, error) {
+	t, done, err := s.gen()
+	// fmt.Println("next", s.name, t, done, err)
+	return t, done, err
+}
+
+func (r Row) String() string {
+	b := strings.Builder{}
+	b.WriteString("Row {")
+	for i, c := range r {
+		if i > 0 {
+			b.WriteString(", ")
+		}
+		b.WriteString(fmt.Sprintf("%s.%s=%s:%s", c.TableName, c.Name, tn(c.Data.Type), c.Data))
+	}
+	b.WriteString("}")
+	return b.String()
 }
 
 func (s *Stream[T]) filter(f func(T) (bool, error)) *Stream[T] {
 	var t T
 	return &Stream[T]{
+		s.name + ".filter",
 		func() (T, bool, error) {
 			for {
 				r, done, err := s.next()
@@ -29,6 +55,7 @@ func (s *Stream[T]) limit(take int) *Stream[T] {
 	i := 0
 	var t T
 	return &Stream[T]{
+		s.name + ".limit",
 		func() (T, bool, error) {
 			if i >= take {
 				return t, true, nil
@@ -56,6 +83,7 @@ func (s *Stream[T]) Consume() ([]T, error) {
 func conv[T, U any](s *Stream[T], f func(T) (U, error)) *Stream[U] {
 	var u U
 	return &Stream[U]{
+		s.name + ".conv",
 		func() (U, bool, error) {
 			rows, done, err := s.next()
 			if err != nil || done {
@@ -73,6 +101,7 @@ func rewindable(xs *Stream[Row]) (*Stream[Row], func() *Stream[Row]) {
 		return arrstream(items)
 	}
 	s := &Stream[Row]{
+		xs.name + ".rewindable",
 		func() (Row, bool, error) {
 			x, done, err := xs.next()
 			if err != nil || done {
@@ -87,6 +116,7 @@ func rewindable(xs *Stream[Row]) (*Stream[Row], func() *Stream[Row]) {
 
 func tablestream(tableName string, s func() (map[string]Value, error)) *Stream[Row] {
 	return &Stream[Row]{
+		"table " + tableName,
 		func() (Row, bool, error) {
 			row, err := s()
 			if err != nil {
@@ -108,6 +138,7 @@ func arrstream[T any](xs []T) *Stream[T] {
 	var t T
 	i := 0
 	return &Stream[T]{
+		"array",
 		func() (T, bool, error) {
 			if i >= len(xs) {
 				return t, true, nil

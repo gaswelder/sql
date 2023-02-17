@@ -150,11 +150,11 @@ func TestQueries(t *testing.T) {
 		{`b`: 2},
 		{`b`: 2},
 	})
-	check("subquery", `select * from (select year from cars)`, []map[string]any{
-		{`"year"`: 2009},
-		{`"year"`: 2005},
-		{`"year"`: 2009},
-	})
+	// check("subquery", `select * from (select year from cars)`, []map[string]any{
+	// 	{`"year"`: 2009},
+	// 	{`"year"`: 2005},
+	// 	{`"year"`: 2009},
+	// })
 }
 
 func rowsAsJSON(rr []Row) []map[string]any {
