@@ -1,4 +1,4 @@
-package sql
+package main
 
 type stream[T any] struct {
 	next func() (T, bool, error)
