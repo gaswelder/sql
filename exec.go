@@ -68,13 +68,9 @@ func findTable(e Engine, name string) (Table, error) {
 
 // Exec runs the query and returns the results.
 func (e Engine) Exec(Q Query) (*Stream[Row], error) {
-	if err := normalize(&Q, e.tables); err != nil {
-		return nil, err
-	}
 	if len(Q.Selectors) == 0 {
 		return nil, fmt.Errorf("empty selectors list")
 	}
-
 	// Define the base input
 	var input *Stream[Row]
 	switch v := Q.From.(type) {
@@ -143,25 +139,6 @@ func (e Engine) Exec(Q Query) (*Stream[Row], error) {
 	return project(groupsStream, Q), nil
 }
 
-func project(groupsStream *Stream[[]Row], Q Query) *Stream[Row] {
-	return conv(groupsStream, func(rows []Row) (Row, error) {
-		exampleRow := rows[0]
-		groupRow := make(Row, 0)
-		for _, selector := range Q.Selectors {
-			val, err := selector.expr.eval(exampleRow, rows)
-			if err != nil {
-				return nil, err
-			}
-			alias := selector.alias
-			if alias == "" {
-				alias = selector.expr.String()
-			}
-			groupRow = append(groupRow, Cell{Name: alias, Data: val})
-		}
-		return groupRow, nil
-	})
-}
-
 func groupRows(input *Stream[Row], Q Query) (*Stream[[]Row], error) {
 	if len(Q.GroupBy) == 0 {
 		return groupByNothing(input, Q)
@@ -216,7 +193,7 @@ func groupByNothing(input *Stream[Row], Q Query) (*Stream[[]Row], error) {
 		switch x.expr.(type) {
 		case *aggregate:
 			hasAggregates = true
-		case *columnRef, *functionkek, *Value:
+		case *columnRef, *functionkek, *Value, *star:
 			hasExpressions = true
 		default:
 			panic(fmt.Errorf("unhandled switch case: %s", reflect.TypeOf(x.expr)))
@@ -349,4 +326,29 @@ func orderRows(groupsIt *Stream[[]Row], q Query) (*Stream[[]Row], error) {
 		return false
 	})
 	return arrstream(result), nil
+}
+
+func project(groupsStream *Stream[[]Row], Q Query) *Stream[Row] {
+	return conv(groupsStream, func(rows []Row) (Row, error) {
+		exampleRow := rows[0]
+		groupRow := make(Row, 0)
+		for _, selector := range Q.Selectors {
+			if _, ok := selector.expr.(*star); ok {
+				for _, c := range exampleRow {
+					groupRow = append(groupRow, Cell{Name: fmt.Sprintf(`"%s"."%s"`, c.TableName, c.Name), Data: c.Data})
+				}
+				continue
+			}
+			val, err := selector.expr.eval(exampleRow, rows)
+			if err != nil {
+				return nil, err
+			}
+			alias := selector.alias
+			if alias == "" {
+				alias = selector.expr.String()
+			}
+			groupRow = append(groupRow, Cell{Name: alias, Data: val})
+		}
+		return groupRow, nil
+	})
 }
