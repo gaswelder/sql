@@ -30,20 +30,6 @@ func TestQueries(t *testing.T) {
 		},
 	}
 
-	tbl := func(rr []Row) string {
-		sb := strings.Builder{}
-		for _, r := range rr {
-			for i, c := range r {
-				if i > 0 {
-					sb.WriteString(", ")
-				}
-				sb.WriteString(fmt.Sprintf("%s=%v", c.Name, c.Data))
-			}
-			sb.WriteByte('\n')
-		}
-		return sb.String()
-	}
-
 	mp := func(rr []map[string]any) string {
 		sb := strings.Builder{}
 		for _, r := range rr {
@@ -70,7 +56,7 @@ func TestQueries(t *testing.T) {
 			}
 			diff := cmp.Diff(rowsAsJSON(r), want)
 			if diff != "" {
-				fmt.Printf("query:\n%s\n\nwant:\n%s\ngot:\n%s\n", query, mp(want), tbl(r))
+				fmt.Printf("query:\n%s\n\nwant:\n%s\ngot:\n%s\n", query, mp(want), formatRows(r))
 				t.Fatalf("%s", diff)
 			}
 		})
