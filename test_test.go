@@ -1,7 +1,10 @@
 package sql
 
 import (
+	"encoding/json"
 	"fmt"
+	"io/ioutil"
+	"reflect"
 	"strings"
 	"testing"
 
@@ -30,25 +33,68 @@ func (data dummy) ColumnNames() []string {
 	return s
 }
 
+func jsonTable(path string) dummy {
+	data, err := ioutil.ReadFile(path)
+	if err != nil {
+		panic(err)
+	}
+	var items []map[string]any
+	err = json.Unmarshal(data, &items)
+	if err != nil {
+		panic(err)
+	}
+	for i, item := range items {
+		for k, v := range item {
+			if f, ok := v.(float64); ok && float64(int(f)) == f {
+				items[i][k] = int(f)
+			}
+		}
+	}
+
+	guessType := func(x any) ValueType {
+		switch x.(type) {
+		case string:
+			return String
+		case float64:
+			return Double
+		case int:
+			return Int
+		default:
+			panic(fmt.Errorf("unexpected value type: %s", reflect.TypeOf(x)))
+		}
+	}
+
+	extend := func(t1, t2 ValueType) ValueType {
+		if t1 == undefined {
+			return t2
+		}
+		if t1 == t2 {
+			return t1
+		}
+		panic(fmt.Errorf("extend %s %s", tn(t1), tn(t2)))
+	}
+
+	schema := map[string]ValueType{}
+	for _, item := range items {
+		for k, v := range item {
+			schema[k] = extend(schema[k], guessType(v))
+		}
+	}
+
+	d := dummy{}
+	for _, item := range items {
+		row := map[string]Value{}
+		for k, t := range schema {
+			row[k] = Value{t, item[k]}
+		}
+		d = append(d, row)
+	}
+	return d
+}
+
 func TestQueries(t *testing.T) {
 	data := map[string]Table{
-		"cars": dummy{
-			{
-				"name":  Value{String, "BMW Z4 Roadster (II)"},
-				"year":  Value{Int, 2009},
-				"price": Value{Int, 35900},
-			},
-			{
-				"name":  Value{String, "Cadillac SRX"},
-				"year":  Value{Int, 2005},
-				"price": Value{Int, 69000},
-			},
-			{
-				"name":  Value{String, "Kia Soul"},
-				"year":  Value{Int, 2009},
-				"price": Value{Int, 30000},
-			},
-		},
+		"cars": jsonTable("test-data.json"),
 		"t1": dummy{
 			{"id": Value{Int, 1}, "name": Value{String, "one"}},
 			{"id": Value{Int, 2}, "name": Value{String, "'"}},

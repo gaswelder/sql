@@ -5,7 +5,8 @@ import "fmt"
 type ValueType int
 
 const (
-	String ValueType = 1 + iota
+	undefined ValueType = iota
+	String    ValueType = 1 + iota
 	Int
 	Double
 	Bool
@@ -64,6 +65,8 @@ func (a Value) lessThan(b Value) (bool, error) {
 	switch a.Type {
 	case Int:
 		return a.Data.(int) < b.Data.(int), nil
+	case Double:
+		return a.Data.(float64) < b.Data.(float64), nil
 	default:
 		return false, fmt.Errorf("lessThan: don't know how to compare values of type %s", tn(a.Type))
 	}
