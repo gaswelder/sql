@@ -7,7 +7,7 @@ import (
 
 // Query is a syntax tree that represents a query.
 type Query struct {
-	From      *tableName
+	From      any
 	Joins     []joinspec
 	Filter    expression
 	Selectors []selector
@@ -50,17 +50,28 @@ func (t tableName) String() string {
 
 // Parse parses an SQL string and returns a query syntax tree.
 func Parse(sqlString string) (Query, error) {
-	var result Query
-	var err error
 	b := tokenizer{
 		b:     NewParsebuf(sqlString),
 		peeks: nil,
 	}
+	result, err := readQuery(&b)
+	if err != nil {
+		return result, err
+	}
+	if b.peek().t != tEnd {
+		fmt.Println(FormatQuery(result))
+		return result, fmt.Errorf("unexpected token: %s", b.peek())
+	}
+	return result, nil
+}
+
+func readQuery(b *tokenizer) (Query, error) {
+	var result Query
 	if !b.eati(tKeyword, "SELECT") {
 		return result, fmt.Errorf("SELECT expected, got %s", b.peek())
 	}
 	for {
-		e, err := readSelector(&b)
+		e, err := readSelector(b)
 		if err != nil {
 			return result, err
 		}
@@ -70,18 +81,32 @@ func Parse(sqlString string) (Query, error) {
 		}
 	}
 	if b.eati(tKeyword, "FROM") {
-		from, err := b.next()
-		if err != nil {
-			return result, err
+		// Subquery
+		if b.eati(tOp, "(") {
+			var err error
+			result.From, err = readQuery(b)
+			if err != nil {
+				return result, err
+			}
+			if !b.eati(tOp, ")") {
+				return result, fmt.Errorf("expected ')' after subquery, got %s", b.peek())
+			}
+		} else {
+			// Table name
+			from, err := b.next()
+			if err != nil {
+				return result, err
+			}
+			if from.t != tIdentifier {
+				return result, fmt.Errorf("expected identifier, got %s", from)
+			}
+			result.From = &tableName{from.val}
 		}
-		if from.t != tIdentifier {
-			return result, fmt.Errorf("expected identifier, got %s", from)
-		}
-		result.From = &tableName{from.val}
-		result.Joins = readJoins(&b)
+		result.Joins = readJoins(b)
 	}
 	if b.eati(tKeyword, "WHERE") {
-		result.Filter, err = readExpression(&b)
+		var err error
+		result.Filter, err = readExpression(b)
 		if err != nil {
 			return result, err
 		}
@@ -91,7 +116,7 @@ func Parse(sqlString string) (Query, error) {
 			return result, fmt.Errorf("expected BY after GROUP, got '%s", b.peek())
 		}
 		for {
-			gr, err := readExpression(&b)
+			gr, err := readExpression(b)
 			if err != nil {
 				return result, err
 			}
@@ -106,7 +131,7 @@ func Parse(sqlString string) (Query, error) {
 			return result, fmt.Errorf("expected BY after ORDER, got '%s", b.peek())
 		}
 		for {
-			result.OrderBy = append(result.OrderBy, readOrder(&b))
+			result.OrderBy = append(result.OrderBy, readOrder(b))
 			if !b.eat(tOp, ",") {
 				break
 			}
@@ -126,10 +151,6 @@ func Parse(sqlString string) (Query, error) {
 		}
 		result.Limit.Set = true
 		result.Limit.Value = val
-	}
-	if b.peek().t != tEnd {
-		fmt.Println(FormatQuery(result))
-		return result, fmt.Errorf("unexpected token: %s", b.peek())
 	}
 	return result, nil
 }

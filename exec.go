@@ -50,14 +50,6 @@ func (e Engine) ExecString(sql string) ([]Row, error) {
 	return s.Consume()
 }
 
-type RowsStream struct {
-	Next func() (Row, error)
-}
-
-func (s *RowsStream) Consume() ([]Row, error) {
-	return consume(s.Next)
-}
-
 func findTable(e Engine, name string) (Table, error) {
 	options := []string{}
 	for k := range e.tables {
@@ -75,21 +67,31 @@ func findTable(e Engine, name string) (Table, error) {
 }
 
 // Exec runs the query and returns the results.
-func (e Engine) Exec(Q Query) (*RowsStream, error) {
+func (e Engine) Exec(Q Query) (*Stream[Row], error) {
 	if err := normalize(&Q, e.tables); err != nil {
 		return nil, err
 	}
 
 	// Define the base input
-	var input *stream[Row]
-	if Q.From != nil {
-		table, err := findTable(e, Q.From.Name)
+	var input *Stream[Row]
+	switch v := Q.From.(type) {
+	case *tableName:
+		table, err := findTable(e, v.Name)
 		if err != nil {
 			return nil, err
 		}
-		input = tablestream(Q.From.Name, table.GetRows())
-	} else {
+		input = tablestream(v.Name, table.GetRows())
+	case Query:
+		var err error
+		input, err = e.Exec(v)
+		if err != nil {
+			return nil, err
+		}
+	// Empty FROM
+	case nil:
 		input = arrstream([]Row{{}})
+	default:
+		panic(fmt.Errorf("unhandled from type: %s", reflect.TypeOf(v)))
 	}
 
 	// Join other inputs
@@ -135,13 +137,10 @@ func (e Engine) Exec(Q Query) (*RowsStream, error) {
 	if Q.Limit.Set {
 		groupsStream = groupsStream.limit(Q.Limit.Value)
 	}
-
-	// Format the results
-	results := project(groupsStream, Q)
-	return toRowsStream(results), nil
+	return project(groupsStream, Q), nil
 }
 
-func project(groupsIt *stream[[]Row], Q Query) *stream[Row] {
+func project(groupsIt *Stream[[]Row], Q Query) *Stream[Row] {
 	return conv(groupsIt, func(rows []Row) (Row, error) {
 		exampleRow := rows[0]
 		groupRow := make(Row, 0)
@@ -160,12 +159,12 @@ func project(groupsIt *stream[[]Row], Q Query) *stream[Row] {
 	})
 }
 
-func groupRows(input *stream[Row], Q Query) (*stream[[]Row], error) {
+func groupRows(input *Stream[Row], Q Query) (*Stream[[]Row], error) {
 	if len(Q.GroupBy) == 0 {
 		return groupByNothing(input, Q)
 	}
 
-	allRows, err := input.consume()
+	allRows, err := input.Consume()
 	if err != nil {
 		return nil, err
 	}
@@ -207,7 +206,7 @@ func groupRows(input *stream[Row], Q Query) (*stream[[]Row], error) {
 	return arrstream(groups), nil
 }
 
-func groupByNothing(input *stream[Row], Q Query) (*stream[[]Row], error) {
+func groupByNothing(input *Stream[Row], Q Query) (*Stream[[]Row], error) {
 	hasExpressions := false
 	hasAggregates := false
 	for _, x := range Q.Selectors {
@@ -230,13 +229,13 @@ func groupByNothing(input *stream[Row], Q Query) (*stream[[]Row], error) {
 	}
 	// select count(*)
 	init := false
-	return &stream[[]Row]{
+	return &Stream[[]Row]{
 		func() ([]Row, bool, error) {
 			if init {
 				return nil, true, nil
 			}
 			init = true
-			rows, err := input.consume()
+			rows, err := input.Consume()
 			if err != nil {
 				return nil, false, err
 			}
@@ -258,7 +257,7 @@ func concatRows(a, b Row) Row {
 	return r
 }
 
-func joinTables(xs, ys *stream[Row]) *stream[Row] {
+func joinTables(xs, ys *Stream[Row]) *Stream[Row] {
 	var err error
 	var left, right Row
 	var leftdone bool
@@ -292,7 +291,7 @@ func joinTables(xs, ys *stream[Row]) *stream[Row] {
 		}
 	}
 
-	return &stream[Row]{
+	return &Stream[Row]{
 		func() (Row, bool, error) {
 			advance()
 			if err != nil {
@@ -306,8 +305,8 @@ func joinTables(xs, ys *stream[Row]) *stream[Row] {
 	}
 }
 
-func orderRows(groupsIt *stream[[]Row], q Query) (*stream[[]Row], error) {
-	groups, err := groupsIt.consume()
+func orderRows(groupsIt *Stream[[]Row], q Query) (*Stream[[]Row], error) {
+	groups, err := groupsIt.Consume()
 	if err != nil {
 		return nil, err
 	}

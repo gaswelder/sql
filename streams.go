@@ -1,12 +1,12 @@
 package main
 
-type stream[T any] struct {
+type Stream[T any] struct {
 	next func() (T, bool, error)
 }
 
-func (s *stream[T]) filter(f func(T) (bool, error)) *stream[T] {
+func (s *Stream[T]) filter(f func(T) (bool, error)) *Stream[T] {
 	var t T
-	return &stream[T]{
+	return &Stream[T]{
 		func() (T, bool, error) {
 			for {
 				r, done, err := s.next()
@@ -25,10 +25,10 @@ func (s *stream[T]) filter(f func(T) (bool, error)) *stream[T] {
 	}
 }
 
-func (s *stream[T]) limit(take int) *stream[T] {
+func (s *Stream[T]) limit(take int) *Stream[T] {
 	i := 0
 	var t T
-	return &stream[T]{
+	return &Stream[T]{
 		func() (T, bool, error) {
 			if i >= take {
 				return t, true, nil
@@ -38,7 +38,7 @@ func (s *stream[T]) limit(take int) *stream[T] {
 		}}
 }
 
-func (s *stream[T]) consume() ([]T, error) {
+func (s *Stream[T]) Consume() ([]T, error) {
 	var groups []T
 	for {
 		r, done, err := s.next()
@@ -53,9 +53,9 @@ func (s *stream[T]) consume() ([]T, error) {
 	return groups, nil
 }
 
-func conv[T, U any](s *stream[T], f func(T) (U, error)) *stream[U] {
+func conv[T, U any](s *Stream[T], f func(T) (U, error)) *Stream[U] {
 	var u U
-	return &stream[U]{
+	return &Stream[U]{
 		func() (U, bool, error) {
 			rows, done, err := s.next()
 			if err != nil || done {
@@ -67,42 +67,12 @@ func conv[T, U any](s *stream[T], f func(T) (U, error)) *stream[U] {
 	}
 }
 
-func toRowsStream(s *stream[Row]) *RowsStream {
-	return &RowsStream{
-		func() (Row, error) {
-			r, done, err := s.next()
-			if err != nil {
-				return nil, err
-			}
-			if done {
-				return nil, nil
-			}
-			return r, nil
-		},
-	}
-}
-
-func consume(it func() (Row, error)) ([]Row, error) {
-	var filtered []Row
-	for {
-		r, err := it()
-		if err != nil {
-			return nil, err
-		}
-		if r == nil {
-			break
-		}
-		filtered = append(filtered, r)
-	}
-	return filtered, nil
-}
-
-func rewindable(xs *stream[Row]) (*stream[Row], func() *stream[Row]) {
+func rewindable(xs *Stream[Row]) (*Stream[Row], func() *Stream[Row]) {
 	var items []Row
-	rewind := func() *stream[Row] {
+	rewind := func() *Stream[Row] {
 		return arrstream(items)
 	}
-	s := &stream[Row]{
+	s := &Stream[Row]{
 		func() (Row, bool, error) {
 			x, done, err := xs.next()
 			if err != nil || done {
@@ -115,8 +85,8 @@ func rewindable(xs *stream[Row]) (*stream[Row], func() *stream[Row]) {
 	return s, rewind
 }
 
-func tablestream(tableName string, s func() (map[string]Value, error)) *stream[Row] {
-	return &stream[Row]{
+func tablestream(tableName string, s func() (map[string]Value, error)) *Stream[Row] {
+	return &Stream[Row]{
 		func() (Row, bool, error) {
 			row, err := s()
 			if err != nil {
@@ -134,10 +104,10 @@ func tablestream(tableName string, s func() (map[string]Value, error)) *stream[R
 	}
 }
 
-func arrstream[T any](xs []T) *stream[T] {
+func arrstream[T any](xs []T) *Stream[T] {
 	var t T
 	i := 0
-	return &stream[T]{
+	return &Stream[T]{
 		func() (T, bool, error) {
 			if i >= len(xs) {
 				return t, true, nil
