@@ -20,12 +20,9 @@ func main() {
 		log.Fatal(err)
 	}
 	for _, r := range rows {
-		for i, c := range r {
-			if i > 0 {
-				fmt.Printf(" | ")
-			}
-			fmt.Printf("%s=%s", c.Name, c.Data.String())
+		for _, c := range r {
+			fmt.Printf("%s = %s\n", c.Name, c.Data.String())
 		}
-		fmt.Printf("\n")
+		fmt.Printf("---------------\n")
 	}
 }

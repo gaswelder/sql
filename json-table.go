@@ -55,6 +55,8 @@ func jsonTable(path string) dummy {
 			return Double
 		case int:
 			return Int
+		case []interface{}:
+			return Array
 		default:
 			panic(fmt.Errorf("unexpected value type: %s", reflect.TypeOf(x)))
 		}
@@ -66,6 +68,12 @@ func jsonTable(path string) dummy {
 		}
 		if t1 == t2 {
 			return t1
+		}
+		if t1 == Int && t2 == String {
+			return String
+		}
+		if t1 == String && t2 == Int {
+			return String
 		}
 		panic(fmt.Errorf("extend %s %s", tn(t1), tn(t2)))
 	}
