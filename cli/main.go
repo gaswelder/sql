@@ -35,7 +35,7 @@ var formatters = map[string]func([]sql.Row){
 		}
 	},
 	"t": func(rows []sql.Row) {
-		fmt.Println(sql.FormatRows(rows))
+		fmt.Println(sql.FormatRowsAsTable(rows, 100))
 	},
 }
 

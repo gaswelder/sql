@@ -56,7 +56,7 @@ func TestQueries(t *testing.T) {
 			}
 			diff := cmp.Diff(rowsAsJSON(r), want)
 			if diff != "" {
-				fmt.Printf("query:\n%s\n\nwant:\n%s\ngot:\n%s\n", query, mp(want), FormatRows(r))
+				fmt.Printf("query:\n%s\n\nwant:\n%s\ngot:\n%s\n", query, mp(want), FormatRowsAsTable(r, 100))
 				t.Fatalf("%s", diff)
 			}
 		})
