@@ -1,4 +1,4 @@
-package main
+package sql
 
 import (
 	"fmt"
@@ -10,7 +10,7 @@ import (
 
 func TestQueries(t *testing.T) {
 	data := map[string]Table{
-		"cars": jsonTable("test-data.json"),
+		"cars": JsonTable("test-data.json"),
 		"t1": dummy{
 			{"id": Value{Int, 1}, "name": Value{String, "one"}},
 			{"id": Value{Int, 2}, "name": Value{String, "'"}},
@@ -56,7 +56,7 @@ func TestQueries(t *testing.T) {
 			}
 			diff := cmp.Diff(rowsAsJSON(r), want)
 			if diff != "" {
-				fmt.Printf("query:\n%s\n\nwant:\n%s\ngot:\n%s\n", query, mp(want), formatRows(r))
+				fmt.Printf("query:\n%s\n\nwant:\n%s\ngot:\n%s\n", query, mp(want), FormatRows(r))
 				t.Fatalf("%s", diff)
 			}
 		})

@@ -1,4 +1,4 @@
-package main
+package sql
 
 import (
 	"encoding/json"
@@ -29,7 +29,7 @@ func (data dummy) ColumnNames() []string {
 	return s
 }
 
-func jsonTable(path string) dummy {
+func JsonTable(path string) dummy {
 	data, err := ioutil.ReadFile(path)
 	if err != nil {
 		panic(err)

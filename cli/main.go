@@ -5,10 +5,12 @@ import (
 	"flag"
 	"fmt"
 	"os"
+
+	"github.com/gaswelder/sql"
 )
 
-var formatters = map[string]func([]Row){
-	"j": func(rows []Row) {
+var formatters = map[string]func([]sql.Row){
+	"j": func(rows []sql.Row) {
 		for _, r := range rows {
 			m := map[string]any{}
 			for _, c := range r {
@@ -32,8 +34,8 @@ var formatters = map[string]func([]Row){
 			fmt.Println(string(data))
 		}
 	},
-	"t": func(rows []Row) {
-		fmt.Println(formatRows(rows))
+	"t": func(rows []sql.Row) {
+		fmt.Println(sql.FormatRows(rows))
 	},
 }
 
@@ -51,8 +53,8 @@ func main() {
 		os.Exit(1)
 	}
 
-	table := jsonTable(args[0])
-	e := New(map[string]Table{"t": table})
+	table := sql.JsonTable(args[0])
+	e := sql.New(map[string]sql.Table{"t": table})
 	rows, err := e.ExecString(args[1])
 	if err != nil {
 		os.Stderr.WriteString(err.Error() + "\n")

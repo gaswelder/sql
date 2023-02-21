@@ -1,4 +1,4 @@
-package main
+package sql
 
 import (
 	"fmt"
@@ -63,7 +63,7 @@ func FormatQuery(q Query) string {
 	return r.String()
 }
 
-func formatRows(rr []Row) string {
+func FormatRows(rr []Row) string {
 	sb := strings.Builder{}
 	for _, r := range rr {
 		for i, c := range r {
