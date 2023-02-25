@@ -10,7 +10,7 @@ type Stream[T any] struct {
 	gen  func() (T, bool, error)
 }
 
-func (s *Stream[T]) next() (T, bool, error) {
+func (s *Stream[T]) Next() (T, bool, error) {
 	t, done, err := s.gen()
 	// fmt.Println("next", s.name, t, done, err)
 	return t, done, err
@@ -35,7 +35,7 @@ func (s *Stream[T]) filter(f func(T) (bool, error)) *Stream[T] {
 		s.name + ".filter",
 		func() (T, bool, error) {
 			for {
-				r, done, err := s.next()
+				r, done, err := s.Next()
 				if done || err != nil {
 					return t, done, err
 				}
@@ -61,14 +61,14 @@ func (s *Stream[T]) limit(take int) *Stream[T] {
 				return t, true, nil
 			}
 			i++
-			return s.next()
+			return s.Next()
 		}}
 }
 
 func (s *Stream[T]) Consume() ([]T, error) {
 	var groups []T
 	for {
-		r, done, err := s.next()
+		r, done, err := s.Next()
 		if err != nil {
 			return nil, err
 		}
@@ -85,7 +85,7 @@ func conv[T, U any](s *Stream[T], f func(T) (U, error)) *Stream[U] {
 	return &Stream[U]{
 		s.name + ".conv",
 		func() (U, bool, error) {
-			rows, done, err := s.next()
+			rows, done, err := s.Next()
 			if err != nil || done {
 				return u, done, err
 			}
@@ -103,7 +103,7 @@ func rewindable(xs *Stream[Row]) (*Stream[Row], func() *Stream[Row]) {
 	s := &Stream[Row]{
 		xs.name + ".rewindable",
 		func() (Row, bool, error) {
-			x, done, err := xs.next()
+			x, done, err := xs.Next()
 			if err != nil || done {
 				return nil, done, err
 			}

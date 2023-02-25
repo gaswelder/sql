@@ -254,7 +254,7 @@ func joinTables(xs, ys *Stream[Row]) *Stream[Row] {
 	advance := func() {
 		if !init {
 			init = true
-			left, leftdone, err = xs.next()
+			left, leftdone, err = xs.Next()
 		}
 		if err != nil {
 			return
@@ -262,17 +262,17 @@ func joinTables(xs, ys *Stream[Row]) *Stream[Row] {
 		if leftdone {
 			return
 		}
-		right, rightdone, err = yss.next()
+		right, rightdone, err = yss.Next()
 		if err != nil {
 			return
 		}
 		if rightdone {
 			yss = rewind()
-			right, rightdone, err = yss.next()
+			right, rightdone, err = yss.Next()
 			if err != nil {
 				return
 			}
-			left, leftdone, err = xs.next()
+			left, leftdone, err = xs.Next()
 		}
 	}
 
