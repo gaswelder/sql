@@ -5,8 +5,6 @@ import (
 	"reflect"
 	"sort"
 	"strings"
-
-	"github.com/pkg/errors"
 )
 
 // Row is a collection of cells.
@@ -113,7 +111,7 @@ func (e Engine) Exec(Q Query) (*Stream[Row], error) {
 		input = input.filter(func(r Row) (bool, error) {
 			ok, err := Q.Filter.eval(r, nil)
 			if err != nil {
-				return false, errors.Wrap(err, "failed to calculate filter condition")
+				return false, fmt.Errorf("failed to calculate filter condition: %w", err)
 			}
 			return ok.Data.(bool), nil
 		})
