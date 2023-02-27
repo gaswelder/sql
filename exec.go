@@ -66,6 +66,24 @@ func findTable(e Engine, name string) (Table, error) {
 
 // Exec runs the query and returns the results.
 func (e Engine) Exec(Q Query) (*Stream[Row], error) {
+
+	// 	## SQL's logical order of operations
+	// 1. from, join, apply
+	// 2. where
+	// 3. connect by (Oracle)
+	// 4. group by
+	// 5. aggregations
+	// 6. having
+	// 7. window
+	// 8. model (Oracle)
+	// 9. select
+	// 10. distinct
+	// 11. union, intersect, except
+	// 12. order by
+	// 13. offset
+	// 14. limit
+	// 15. for update
+
 	if len(Q.Selectors) == 0 {
 		return nil, fmt.Errorf("empty selectors list")
 	}
