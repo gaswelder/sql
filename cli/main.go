@@ -1,7 +1,6 @@
 package main
 
 import (
-	"bufio"
 	"encoding/json"
 	"flag"
 	"fmt"
@@ -40,110 +39,23 @@ func main() {
 		os.Exit(1)
 	}
 
-	Q, err := sql.Parse(args[1])
-	if err != nil {
-		panic(err)
-	}
-
+	var f io.Reader
 	if args[0] == "-" {
-		reader := bufio.NewReader(os.Stdin)
-		next := func() (map[string]any, error) {
-			line, err := reader.ReadString('\n')
-			if err != nil {
-				return nil, err
-			}
-			var m map[string]any
-			err = json.Unmarshal([]byte(line), &m)
-			if err != nil {
-				return nil, err
-			}
-			return m, nil
-		}
-
-		firstRow, err := next()
-		if err != nil {
-			panic(err)
-		}
-		items := make(chan map[string]any)
-		e := sql.New(map[string]sql.Table{"t": &input{
-			firstRow: firstRow,
-			items:    items,
-		}})
-		go func() {
-			items <- firstRow
-			for {
-				row, err := next()
-				if err == io.EOF {
-					close(items)
-					return
-				}
-				if err != nil {
-					panic(err)
-				}
-				items <- row
-			}
-		}()
-		rows, err := e.Exec(Q)
-		if err != nil {
-			panic(err)
-		}
-		for {
-			r, done, err := rows.Next()
-			if err != nil {
-				panic(err)
-			}
-			if done {
-				break
-			}
-			s, err := rowToJSON(r)
-			if err != nil {
-				panic(err)
-			}
-			fmt.Println(s)
-		}
+		f = os.Stdin
 	} else {
 		f, err := os.Open(args[0])
 		if err != nil {
 			panic(err)
 		}
 		defer f.Close()
-
-		table := sql.JsonStream(f)
-		e := sql.New(map[string]sql.Table{"t": table})
-		rows, err := e.ExecString(args[1])
-		if err != nil {
-			os.Stderr.WriteString(err.Error() + "\n")
-			os.Exit(1)
-		}
-		format(rows)
 	}
-}
-
-type input struct {
-	firstRow map[string]any
-	items    chan map[string]any
-}
-
-func (i *input) ColumnNames() []string {
-	r := []string{}
-	for k := range i.firstRow {
-		r = append(r, k)
+	e := sql.New(map[string]sql.Table{"t": sql.JsonStream(f)})
+	rows, err := e.ExecString(args[1])
+	if err != nil {
+		os.Stderr.WriteString(err.Error() + "\n")
+		os.Exit(1)
 	}
-	return r
-}
-
-func (i *input) GetRows() func() (map[string]sql.Value, error) {
-	return func() (map[string]sql.Value, error) {
-		item, ok := <-i.items
-		if !ok {
-			return nil, nil
-		}
-		row := map[string]sql.Value{}
-		for k := range i.firstRow {
-			row[k] = sql.Value{Type: sql.String, Data: item[k]}
-		}
-		return row, nil
-	}
+	format(rows)
 }
 
 func rowToJSON(r sql.Row) (string, error) {
