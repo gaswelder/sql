@@ -38,10 +38,6 @@ func tn(t ValueType) string {
 	}
 }
 
-func (c Value) eval(x Row, group []Row) (Value, error) {
-	return c, nil
-}
-
 func (e Value) String() string {
 	return fmt.Sprintf("%v", e.Data)
 }

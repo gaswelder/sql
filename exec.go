@@ -118,7 +118,7 @@ func (e Engine) Exec(Q Query) (*Stream[Row], error) {
 		}
 		more := tablestream(j.Table.Name, table.GetRows())
 		input = joinTables(input, more).filter(func(r Row) (bool, error) {
-			ev, err := j.Condition.eval(r, nil)
+			ev, err := eval(j.Condition, r, nil)
 			if err != nil {
 				return false, err
 			}
@@ -128,7 +128,7 @@ func (e Engine) Exec(Q Query) (*Stream[Row], error) {
 
 	if Q.Filter != nil {
 		input = input.filter(func(r Row) (bool, error) {
-			ok, err := Q.Filter.eval(r, nil)
+			ok, err := eval(Q.Filter, r, nil)
 			if err != nil {
 				return false, fmt.Errorf("failed to calculate filter condition: %w", err)
 			}
@@ -178,7 +178,7 @@ func groupRows(input *Stream[Row], Q Query) (*Stream[[]Row], error) {
 	for _, row := range allRows {
 		key := []Value{}
 		for _, e := range Q.GroupBy {
-			ev, err := e.eval(row, nil)
+			ev, err := eval(e, row, nil)
 			if err != nil {
 				panic(err)
 			}
@@ -317,11 +317,11 @@ func orderRows(s *Stream[[]Row], q Query) (*Stream[[]Row], error) {
 	copy(result, groups)
 	sort.Slice(result, func(i, j int) bool {
 		for _, ordering := range q.OrderBy {
-			v1, err := ordering.expr.eval(result[i][0], result[i])
+			v1, err := eval(ordering.expr, result[i][0], result[i])
 			if err != nil {
 				panic(err)
 			}
-			v2, err := ordering.expr.eval(result[j][0], result[j])
+			v2, err := eval(ordering.expr, result[j][0], result[j])
 			if err != nil {
 				panic(err)
 			}
@@ -363,7 +363,7 @@ func project(s *Stream[[]Row], Q Query) *Stream[Row] {
 				}
 				continue
 			}
-			val, err := selector.expr.eval(exampleRow, group)
+			val, err := eval(selector.expr, exampleRow, group)
 			if err != nil {
 				return nil, err
 			}

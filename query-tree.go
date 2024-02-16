@@ -37,7 +37,6 @@ type selector struct {
 
 // expression is a node in an SQL expression tree.
 type expression interface {
-	eval(x Row, g []Row) (Value, error)
 	String() string
 }
 

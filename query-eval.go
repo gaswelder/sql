@@ -3,28 +3,52 @@ package sql
 import (
 	"errors"
 	"fmt"
+	"reflect"
 	"strings"
 )
 
-func (e aggregate) eval(x Row, rows []Row) (Value, error) {
-	f, ok := aggregates[strings.ToLower(e.name)]
-	if !ok {
+func eval(node any, row Row, group []Row) (Value, error) {
+	switch e := node.(type) {
+	case *Value:
+		return *e, nil
+
+	case *columnRef:
+		return evalColumnRef(e, row, group)
+
+	case *aggregate:
+		switch strings.ToLower(e.name) {
+		case "count":
+			return evalCount(e.args, group)
+		case "min":
+			return evalMin(e.args, group)
+		}
 		return Value{}, fmt.Errorf("unknown aggregate: %s", e.name)
+
+	case *functionkek:
+		return evalFunction(e, row, group)
+
+	case *binaryOperatorNode:
+		return evalBinaryOp(e, row, group)
+
+	case *fbinaryOr:
+		return evalBinaryOr(e, row, group)
+
+	default:
+		panic(fmt.Sprintf("unknown node in eval: %v", reflect.TypeOf(node)))
 	}
-	return f(e.args, rows)
 }
 
-func (e binaryOperatorNode) eval(x Row, group []Row) (Value, error) {
-	a, err := e.left.eval(x, group)
+func evalBinaryOp(v *binaryOperatorNode, x Row, rows []Row) (Value, error) {
+	a, err := eval(v.left, x, rows)
 	if err != nil {
 		return Value{}, err
 	}
-	b, err := e.right.eval(x, group)
+	b, err := eval(v.right, x, rows)
 	if err != nil {
 		return Value{}, err
 	}
 	var r bool
-	switch e.op {
+	switch v.op {
 	case "=":
 		r, err = a.eq(b)
 	case ">":
@@ -32,13 +56,13 @@ func (e binaryOperatorNode) eval(x Row, group []Row) (Value, error) {
 	case "<":
 		r, err = a.lessThan(b)
 	default:
-		return Value{}, fmt.Errorf("unsupported binary operator: %s", e.op)
+		return Value{}, fmt.Errorf("unsupported binary operator: %s", v.op)
 	}
 	return Value{Bool, r}, err
 }
 
-func (e fbinaryOr) eval(x Row, group []Row) (Value, error) {
-	a, err := e.left.eval(x, group)
+func evalBinaryOr(e *fbinaryOr, x Row, group []Row) (Value, error) {
+	a, err := eval(e.left, x, group)
 	if err != nil {
 		return Value{}, err
 	}
@@ -48,8 +72,7 @@ func (e fbinaryOr) eval(x Row, group []Row) (Value, error) {
 	if a.Data.(bool) {
 		return a, nil
 	}
-
-	b, err := e.right.eval(x, group)
+	b, err := eval(e.right, x, group)
 	if err != nil {
 		return Value{}, err
 	}
@@ -59,11 +82,7 @@ func (e fbinaryOr) eval(x Row, group []Row) (Value, error) {
 	return b, nil
 }
 
-func (s *star) eval(x Row, g []Row) (Value, error) {
-	return Value{}, fmt.Errorf("invalid use of star selector")
-}
-
-func (e columnRef) eval(x Row, group []Row) (Value, error) {
+func evalColumnRef(e *columnRef, x Row, group []Row) (Value, error) {
 	for _, cell := range x {
 		if e.Table != "" && !strings.EqualFold(e.Table, cell.TableName) {
 			continue
@@ -76,15 +95,54 @@ func (e columnRef) eval(x Row, group []Row) (Value, error) {
 	return Value{}, fmt.Errorf("couldn't find %s in a row", e)
 }
 
-func (f functionkek) eval(r Row, group []Row) (Value, error) {
+func evalFunction(f *functionkek, r Row, group []Row) (Value, error) {
 	args := make([]Value, len(f.args))
 	for i, argExpression := range f.args {
-		exprResult, err := argExpression.eval(r, group)
+		exprResult, err := eval(argExpression, r, group)
 		if err != nil {
 			return exprResult, err
 		}
 		args[i] = exprResult
 	}
-
 	return function(f.name, args)
+}
+
+func evalCount(args []expression, rows []Row) (Value, error) {
+	if len(args) != 1 {
+		return Value{}, fmt.Errorf("unimplemented arguments variant for count: %s", args)
+	}
+	if _, ok := args[0].(*star); !ok {
+		return Value{}, fmt.Errorf("unimplemented arguments variant for count: %s", args)
+	}
+	return Value{Int, len(rows)}, nil
+}
+
+func evalMin(args []expression, rows []Row) (Value, error) {
+	if len(args) != 1 {
+		return Value{}, fmt.Errorf("unimplemented arguments variant for min: %s", args)
+	}
+	min := Value{Int, nil}
+	for i, row := range rows {
+		v, err := eval(args[0], row, rows)
+		if err != nil {
+			return Value{}, err
+		}
+		if i == 0 {
+			min = v
+			continue
+		}
+		less, err := v.lessThan(min)
+		if err != nil {
+			return Value{}, err
+		}
+		if less {
+			min = v
+		}
+	}
+	return min, nil
+}
+
+func isAggregate(name string) bool {
+	n := strings.ToLower(name)
+	return n == "count" || n == "min"
 }
