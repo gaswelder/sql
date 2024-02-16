@@ -2,6 +2,7 @@ package sql
 
 import (
 	"fmt"
+	"strconv"
 	"strings"
 )
 
@@ -30,7 +31,7 @@ func getTypeID(s string) ValueTypeID {
 	return undefined
 }
 
-func getValueTypeName(t ValueTypeID) string {
+func getTypeName(t ValueTypeID) string {
 	switch t {
 	case String:
 		return "String"
@@ -55,19 +56,19 @@ func (e Value) String() string {
 
 func (a Value) eq(b Value) (bool, error) {
 	if a.Type != b.Type {
-		return false, fmt.Errorf("can't compare values of different types: %s and %s", getValueTypeName(a.Type), getValueTypeName(b.Type))
+		return false, fmt.Errorf("can't compare values of different types: %s and %s", getTypeName(a.Type), getTypeName(b.Type))
 	}
 	switch a.Type {
 	case String, Int:
 		return a.Data == b.Data, nil
 	default:
-		return false, fmt.Errorf("eq: don't know how to compare values of type %s", getValueTypeName(a.Type))
+		return false, fmt.Errorf("eq: don't know how to compare values of type %s", getTypeName(a.Type))
 	}
 }
 
 func (a Value) lessThan(b Value) (bool, error) {
 	if a.Type != b.Type {
-		return false, fmt.Errorf("can't compare values of different types: %s and %s", getValueTypeName(a.Type), getValueTypeName(b.Type))
+		return false, fmt.Errorf("can't compare values of different types: %s and %s", getTypeName(a.Type), getTypeName(b.Type))
 	}
 	if a.Data == nil || b.Data == nil {
 		return false, nil
@@ -78,7 +79,7 @@ func (a Value) lessThan(b Value) (bool, error) {
 	case Double:
 		return a.Data.(float64) < b.Data.(float64), nil
 	default:
-		return false, fmt.Errorf("lessThan: don't know how to compare values of type %s", getValueTypeName(a.Type))
+		return false, fmt.Errorf("lessThan: don't know how to compare values of type %s", getTypeName(a.Type))
 	}
 }
 
@@ -89,4 +90,22 @@ func (a Value) greaterThan(b Value) (bool, error) {
 	}
 	lt, err := a.lessThan(b)
 	return !lt, err
+}
+
+func (a Value) cast(typeID ValueTypeID) (Value, error) {
+	if typeID == a.Type {
+		return a, nil
+	}
+	switch a.Type {
+	case String:
+		switch typeID {
+		case Int:
+			i, err := strconv.Atoi(a.Data.(string))
+			if err != nil {
+				return Value{}, err
+			}
+			return Value{Int, i}, nil
+		}
+	}
+	return Value{}, fmt.Errorf("conversion from %s to %s not implemented", getTypeName(a.Type), getTypeName(typeID))
 }

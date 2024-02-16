@@ -170,7 +170,7 @@ func JsonTable(path string) dummy {
 		if t1 == String && t2 == Int {
 			return String
 		}
-		panic(fmt.Errorf("extend %s %s", getValueTypeName(t1), getValueTypeName(t2)))
+		panic(fmt.Errorf("extend %s %s", getTypeName(t1), getTypeName(t2)))
 	}
 
 	schema := map[string]ValueTypeID{}

@@ -167,5 +167,5 @@ func (s fromspec) String() string {
 }
 
 func (e *as) String() string {
-	return fmt.Sprintf("%s AS %s", e.Expr.String(), getValueTypeName(e.TypeID))
+	return fmt.Sprintf("%s AS %s", e.Expr.String(), getTypeName(e.TypeID))
 }

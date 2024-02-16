@@ -96,6 +96,20 @@ func evalColumnRef(e *columnRef, x Row, group []Row) (Value, error) {
 }
 
 func evalFunction(f *functionkek, r Row, group []Row) (Value, error) {
+	if strings.ToLower(f.Name) == "cast" {
+		if len(f.Args) != 1 {
+			return Value{}, fmt.Errorf("cast expects one argument, got %d", len(f.Args))
+		}
+		v, ok := f.Args[0].(*as)
+		if !ok {
+			return Value{}, fmt.Errorf("cast expects an AS argument, got %s", f.Args[0].String())
+		}
+		val, err := eval(v.Expr, r, group)
+		if err != nil {
+			return Value{}, err
+		}
+		return val.cast(v.TypeID)
+	}
 	args := make([]Value, len(f.Args))
 	for i, argExpression := range f.Args {
 		exprResult, err := eval(argExpression, r, group)

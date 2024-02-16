@@ -17,6 +17,7 @@ func TestFunctions(t *testing.T) {
 		{`SUBSTRING( 'back yard', 6 )`, Value{String, "yard"}},
 		{`CARDINALITY(ARRAY[1, 2, 3])`, Value{Int, 3}},
 		{`array_contains(array[1,2,3], 2)`, Value{Bool, true}},
+		{`CAST('1' as INT)`, Value{Int, 1}},
 	}
 	for _, c := range cases {
 		t.Run(c.expr, func(t *testing.T) {
