@@ -6,6 +6,48 @@ import (
 	"strings"
 )
 
+func format(q Query) string {
+	r := strings.Builder{}
+
+	r.WriteString("SELECT")
+	for i, s := range q.Selectors {
+		if i > 0 {
+			r.WriteString(",")
+		}
+		r.WriteString(" ")
+		r.WriteString(fmt.Sprintf("%v", s.Expr))
+		if s.Alias != "" {
+			r.WriteString(fmt.Sprintf(" AS %s", s.Alias))
+		}
+	}
+
+	r.WriteString(fmt.Sprintf(" %s \"%s\"", "FROM", q.From))
+
+	for i, j := range q.Joins {
+		if i > 0 {
+			r.WriteString(",")
+		}
+		r.WriteString(fmt.Sprintf(" %s \"%s\"", "JOIN", j.Table))
+		r.WriteString(" ON ")
+		r.WriteString(fmt.Sprintf("%v", j.Condition))
+	}
+
+	if q.Filter != nil {
+		r.WriteString(fmt.Sprintf(" %s %s", "WHERE", q.Filter.String()))
+	}
+
+	if len(q.GroupBy) > 0 {
+		r.WriteString(fmt.Sprintf(" %s ", "GROUP BY"))
+		for i, g := range q.GroupBy {
+			if i > 0 {
+				r.WriteString(", ")
+			}
+			r.WriteString(g.String())
+		}
+	}
+	return r.String()
+}
+
 func FormatQuery(q Query) string {
 	r := strings.Builder{}
 
