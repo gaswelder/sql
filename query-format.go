@@ -62,3 +62,64 @@ func FormatQuery(q Query) string {
 	}
 	return r.String()
 }
+
+func (s star) String() string {
+	return "*"
+}
+
+func (e aggregate) String() string {
+	sb := strings.Builder{}
+	sb.WriteString(e.name)
+	sb.WriteString("(")
+	for _, a := range e.args {
+		sb.WriteString(a.String())
+	}
+	sb.WriteString(")")
+	return sb.String()
+}
+
+func (f functionkek) String() string {
+	b := strings.Builder{}
+	b.WriteString(f.name)
+	b.WriteString("(")
+	for i, a := range f.args {
+		if i > 0 {
+			b.WriteString(", ")
+		}
+		b.WriteString(a.String())
+	}
+	b.WriteString(")")
+	return b.String()
+}
+
+func (e fbinaryOr) String() string {
+	return fmt.Sprintf("%s OR %s", e.left.String(), e.right.String())
+}
+
+func (e binaryOperatorNode) String() string {
+	return fmt.Sprintf("%s = %s", e.left.String(), e.right.String())
+}
+
+func (e columnRef) String() string {
+	if e.Table == "" {
+		return fmt.Sprintf("\"%s\"", e.Column)
+	}
+	return fmt.Sprintf("\"%s\".\"%s\"", e.Table, e.Column)
+}
+
+func (t tableName) String() string {
+	return t.Name
+}
+
+func (s fromspec) String() string {
+	switch s.kind {
+	case kindNil:
+		return ""
+	case kindTableName:
+		return s.tn.String()
+	case kindSubquery:
+		return "(subquery)"
+	default:
+		return "unknown kind"
+	}
+}

@@ -11,13 +11,6 @@ type columnRef struct {
 	Column string
 }
 
-func (e columnRef) String() string {
-	if e.Table == "" {
-		return fmt.Sprintf("\"%s\"", e.Column)
-	}
-	return fmt.Sprintf("\"%s\".\"%s\"", e.Table, e.Column)
-}
-
 func (e columnRef) eval(x Row, group []Row) (Value, error) {
 	for _, cell := range x {
 		if e.Table != "" && !strings.EqualFold(e.Table, cell.TableName) {

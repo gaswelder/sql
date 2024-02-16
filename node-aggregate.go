@@ -58,14 +58,3 @@ func (e aggregate) eval(x Row, rows []Row) (Value, error) {
 	}
 	return f(e.args, rows)
 }
-
-func (e aggregate) String() string {
-	sb := strings.Builder{}
-	sb.WriteString(e.name)
-	sb.WriteString("(")
-	for _, a := range e.args {
-		sb.WriteString(a.String())
-	}
-	sb.WriteString(")")
-	return sb.String()
-}

@@ -30,23 +30,6 @@ type tableName struct {
 	Name string
 }
 
-func (t tableName) String() string {
-	return t.Name
-}
-
-func (s fromspec) String() string {
-	switch s.kind {
-	case kindNil:
-		return ""
-	case kindTableName:
-		return s.tn.String()
-	case kindSubquery:
-		return "(subquery)"
-	default:
-		return "unknown kind"
-	}
-}
-
 type selector struct {
 	expr  expression
 	alias string
