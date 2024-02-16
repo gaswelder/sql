@@ -55,6 +55,9 @@ func (e Value) String() string {
 }
 
 func (a Value) eq(b Value) (bool, error) {
+	if a.Type == Double && b.Type == Int {
+		return a.Data.(float64) == float64(b.Data.(int)), nil
+	}
 	if a.Type != b.Type {
 		return false, fmt.Errorf("can't compare values of different types: %s and %s", getTypeName(a.Type), getTypeName(b.Type))
 	}
@@ -67,6 +70,9 @@ func (a Value) eq(b Value) (bool, error) {
 }
 
 func (a Value) lessThan(b Value) (bool, error) {
+	if a.Type == Double && b.Type == Int {
+		return a.Data.(float64) < float64(b.Data.(int)), nil
+	}
 	if a.Type != b.Type {
 		return false, fmt.Errorf("can't compare values of different types: %s and %s", getTypeName(a.Type), getTypeName(b.Type))
 	}
