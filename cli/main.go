@@ -11,26 +11,6 @@ import (
 	"github.com/gaswelder/sql"
 )
 
-func rowToJSON(r sql.Row) (string, error) {
-	m := map[string]any{}
-	for _, c := range r {
-		n := c.Name
-		if _, ok := m[n]; ok {
-			i := 0
-			for {
-				i++
-				n = fmt.Sprintf("%s_%d", c.Name, i)
-				if _, ok := m[n]; !ok {
-					break
-				}
-			}
-		}
-		m[n] = c.Data.Data
-	}
-	data, err := json.Marshal(m)
-	return string(data), err
-}
-
 var formatters = map[string]func([]sql.Row){
 	"j": func(rows []sql.Row) {
 		for _, r := range rows {
@@ -122,7 +102,13 @@ func main() {
 			fmt.Println(s)
 		}
 	} else {
-		table := sql.JsonTable(args[0])
+		f, err := os.Open(args[0])
+		if err != nil {
+			panic(err)
+		}
+		defer f.Close()
+
+		table := sql.JsonStream(f)
 		e := sql.New(map[string]sql.Table{"t": table})
 		rows, err := e.ExecString(args[1])
 		if err != nil {
@@ -158,4 +144,24 @@ func (i *input) GetRows() func() (map[string]sql.Value, error) {
 		}
 		return row, nil
 	}
+}
+
+func rowToJSON(r sql.Row) (string, error) {
+	m := map[string]any{}
+	for _, c := range r {
+		n := c.Name
+		if _, ok := m[n]; ok {
+			i := 0
+			for {
+				i++
+				n = fmt.Sprintf("%s_%d", c.Name, i)
+				if _, ok := m[n]; !ok {
+					break
+				}
+			}
+		}
+		m[n] = c.Data.Data
+	}
+	data, err := json.Marshal(m)
+	return string(data), err
 }
