@@ -15,9 +15,9 @@ func FormatQuery(q Query) string {
 			r.WriteString(",")
 		}
 		r.WriteString(" ")
-		r.WriteString(fmt.Sprintf("%v", s.expr))
-		if s.alias != "" {
-			r.WriteString(fmt.Sprintf(" AS %s", s.alias))
+		r.WriteString(fmt.Sprintf("%v", s.Expr))
+		if s.Alias != "" {
+			r.WriteString(fmt.Sprintf(" AS %s", s.Alias))
 		}
 	}
 
@@ -69,9 +69,9 @@ func (s star) String() string {
 
 func (e aggregate) String() string {
 	sb := strings.Builder{}
-	sb.WriteString(e.name)
+	sb.WriteString(e.Name)
 	sb.WriteString("(")
-	for _, a := range e.args {
+	for _, a := range e.Args {
 		sb.WriteString(a.String())
 	}
 	sb.WriteString(")")
@@ -112,11 +112,11 @@ func (t tableName) String() string {
 }
 
 func (s fromspec) String() string {
-	switch s.kind {
+	switch s.Kind {
 	case kindNil:
 		return ""
 	case kindTableName:
-		return s.tn.String()
+		return s.Tn.String()
 	case kindSubquery:
 		return "(subquery)"
 	default:

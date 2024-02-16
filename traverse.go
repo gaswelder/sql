@@ -48,7 +48,7 @@ func traverse(x any, f func(any) error) error {
 			return err
 		}
 		for _, sel := range v.Selectors {
-			e1, ok := sel.expr.(expression)
+			e1, ok := sel.Expr.(expression)
 			if !ok {
 				continue
 			}
@@ -86,7 +86,7 @@ func traverse(x any, f func(any) error) error {
 		// if err := f(v); err != nil {
 		// 	return err
 		// }
-		for _, arg := range v.args {
+		for _, arg := range v.Args {
 			if err := traverse(arg, f); err != nil {
 				return err
 			}

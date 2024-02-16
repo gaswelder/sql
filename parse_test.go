@@ -53,9 +53,9 @@ func format(q Query) string {
 			r.WriteString(",")
 		}
 		r.WriteString(" ")
-		r.WriteString(fmt.Sprintf("%v", s.expr))
-		if s.alias != "" {
-			r.WriteString(fmt.Sprintf(" AS %s", s.alias))
+		r.WriteString(fmt.Sprintf("%v", s.Expr))
+		if s.Alias != "" {
+			r.WriteString(fmt.Sprintf(" AS %s", s.Alias))
 		}
 	}
 
@@ -94,4 +94,31 @@ func TestTrailing(t *testing.T) {
 	if diff := cmp.Diff("unexpected token: [identifier kek]", err.Error()); diff != "" {
 		t.Fatalf("%s", diff)
 	}
+}
+
+func TestParse2(t *testing.T) {
+	cases := []struct {
+		s string
+		r any
+	}{
+		{
+			`select count(*) from t`,
+			Query{
+				From: fromspec{
+					Kind: kindTableName,
+					Tn:   &tableName{"t"},
+				},
+				Selectors: []selector{{Expr: &aggregate{Name: "count", Args: []expression{&star{}}}}},
+			}},
+	}
+	for _, c := range cases {
+		q, err := Parse(c.s)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if diff := cmp.Diff(q, c.r); diff != "" {
+			t.Fatalf("%s", diff)
+		}
+	}
+
 }

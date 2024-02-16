@@ -47,7 +47,7 @@ func readQuery(b *tokenizer) (Query, error) {
 			if !b.eati(tOp, ")") {
 				return result, fmt.Errorf("expected ')' after subquery, got %s", b.peek())
 			}
-			result.From = fromspec{kind: kindSubquery, q: &q}
+			result.From = fromspec{Kind: kindSubquery, Q: &q}
 		} else {
 			// Table name
 			from, err := b.next()
@@ -57,7 +57,7 @@ func readQuery(b *tokenizer) (Query, error) {
 			if from.t != tIdentifier {
 				return result, fmt.Errorf("expected identifier, got %s", from)
 			}
-			result.From = fromspec{kind: kindTableName, tn: &tableName{from.val}}
+			result.From = fromspec{Kind: kindTableName, Tn: &tableName{from.val}}
 		}
 		result.Joins = readJoins(b)
 	}
@@ -129,7 +129,7 @@ func readOrder(b *tokenizer) orderspec {
 
 func readSelector(b *tokenizer) (selector, error) {
 	if b.eat(tOp, "*") {
-		return selector{expr: &star{}, alias: ""}, nil
+		return selector{Expr: &star{}, Alias: ""}, nil
 	}
 	expr, err := readExpression(b)
 	if err != nil {
@@ -143,9 +143,9 @@ func readSelector(b *tokenizer) (selector, error) {
 		if alias.t != tIdentifier {
 			return selector{}, fmt.Errorf("expected identifier after AS, got %s", alias)
 		}
-		return selector{expr: expr, alias: alias.val}, nil
+		return selector{Expr: expr, Alias: alias.val}, nil
 	}
-	return selector{expr: expr}, nil
+	return selector{Expr: expr}, nil
 }
 
 func readJoins(b *tokenizer) []joinspec {

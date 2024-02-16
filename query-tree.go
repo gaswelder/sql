@@ -21,9 +21,9 @@ const (
 )
 
 type fromspec struct {
-	kind int
-	q    *Query
-	tn   *tableName
+	Kind int
+	Q    *Query
+	Tn   *tableName
 }
 
 type tableName struct {
@@ -31,8 +31,8 @@ type tableName struct {
 }
 
 type selector struct {
-	expr  expression
-	alias string
+	Expr  expression
+	Alias string
 }
 
 // expression is a node in an SQL expression tree.
@@ -62,8 +62,8 @@ type columnRef struct {
 }
 
 type aggregate struct {
-	name string
-	args []expression
+	Name string
+	Args []expression
 }
 
 type binaryOperatorNode struct {

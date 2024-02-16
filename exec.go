@@ -90,24 +90,24 @@ func (e Engine) Exec(Q Query) (*Stream[Row], error) {
 	// Define the base input
 	var input *Stream[Row]
 	src := Q.From
-	switch src.kind {
+	switch src.Kind {
 	case kindNil:
 		// Empty FROM
 		input = arrstream([]Row{{}})
 	case kindTableName:
-		table, err := findTable(e, src.tn.Name)
+		table, err := findTable(e, src.Tn.Name)
 		if err != nil {
 			return nil, err
 		}
-		input = tablestream(src.tn.Name, table.GetRows())
+		input = tablestream(src.Tn.Name, table.GetRows())
 	case kindSubquery:
 		var err error
-		input, err = e.Exec(*Q.From.q)
+		input, err = e.Exec(*Q.From.Q)
 		if err != nil {
 			return nil, err
 		}
 	default:
-		panic(fmt.Errorf("unhandled from type: %d", src.kind))
+		panic(fmt.Errorf("unhandled from type: %d", src.Kind))
 	}
 
 	// Join other inputs
@@ -207,13 +207,13 @@ func groupByNothing(input *Stream[Row], Q Query) (*Stream[[]Row], error) {
 	hasExpressions := false
 	hasAggregates := false
 	for _, x := range Q.Selectors {
-		switch x.expr.(type) {
+		switch x.Expr.(type) {
 		case *aggregate:
 			hasAggregates = true
 		case *columnRef, *functionkek, *Value, *star:
 			hasExpressions = true
 		default:
-			panic(fmt.Errorf("unhandled switch case: %s", reflect.TypeOf(x.expr)))
+			panic(fmt.Errorf("unhandled switch case: %s", reflect.TypeOf(x.Expr)))
 		}
 	}
 
@@ -357,19 +357,19 @@ func project(s *Stream[[]Row], Q Query) *Stream[Row] {
 		groupRow := make(Row, 0)
 		for _, selector := range Q.Selectors {
 			// Expand star selectors with full rows
-			if _, ok := selector.expr.(*star); ok {
+			if _, ok := selector.Expr.(*star); ok {
 				for _, c := range exampleRow {
 					groupRow = append(groupRow, Cell{Name: c.Name, Data: c.Data})
 				}
 				continue
 			}
-			val, err := eval(selector.expr, exampleRow, group)
+			val, err := eval(selector.Expr, exampleRow, group)
 			if err != nil {
 				return nil, err
 			}
-			alias := selector.alias
+			alias := selector.Alias
 			if alias == "" {
-				alias = selector.expr.String()
+				alias = selector.Expr.String()
 			}
 			groupRow = append(groupRow, Cell{Name: alias, Data: val})
 		}

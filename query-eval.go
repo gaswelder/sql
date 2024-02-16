@@ -16,13 +16,13 @@ func eval(node any, row Row, group []Row) (Value, error) {
 		return evalColumnRef(e, row, group)
 
 	case *aggregate:
-		switch strings.ToLower(e.name) {
+		switch strings.ToLower(e.Name) {
 		case "count":
-			return evalCount(e.args, group)
+			return evalCount(e.Args, group)
 		case "min":
-			return evalMin(e.args, group)
+			return evalMin(e.Args, group)
 		}
-		return Value{}, fmt.Errorf("unknown aggregate: %s", e.name)
+		return Value{}, fmt.Errorf("unknown aggregate: %s", e.Name)
 
 	case *functionkek:
 		return evalFunction(e, row, group)
