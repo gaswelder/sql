@@ -50,11 +50,3 @@ type aggregate struct {
 	name string
 	args []expression
 }
-
-func (e aggregate) eval(x Row, rows []Row) (Value, error) {
-	f, ok := aggregates[strings.ToLower(e.name)]
-	if !ok {
-		return Value{}, fmt.Errorf("unknown aggregate: %s", e.name)
-	}
-	return f(e.args, rows)
-}
