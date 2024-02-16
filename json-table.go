@@ -87,6 +87,9 @@ func (s *jsonStream) parse(m map[string]any) map[string]Value {
 func (s *jsonStream) GetRows() func() (map[string]Value, error) {
 	first := true
 	return func() (map[string]Value, error) {
+		if err := s.init(); err != nil {
+			return nil, err
+		}
 		if first {
 			first = false
 			return s.firstRow, nil
