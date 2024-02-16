@@ -50,3 +50,34 @@ type orderspec struct {
 	desc bool
 	expr expression
 }
+
+type functionkek struct {
+	name string
+	args []expression
+}
+
+// columnRef is an expression node that refers to a column.
+type columnRef struct {
+	Table  string
+	Column string
+}
+
+type aggregate struct {
+	name string
+	args []expression
+}
+
+type binaryOperatorNode struct {
+	op    string
+	left  expression
+	right expression
+}
+
+type fbinaryOr struct {
+	left  expression
+	right expression
+}
+
+type star struct {
+	//
+}

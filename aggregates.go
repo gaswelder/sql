@@ -45,8 +45,3 @@ func isAggregate(name string) bool {
 	_, ok := aggregates[strings.ToLower(name)]
 	return ok
 }
-
-type aggregate struct {
-	name string
-	args []expression
-}
