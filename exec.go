@@ -89,24 +89,25 @@ func (e Engine) Exec(Q Query) (*Stream[Row], error) {
 	}
 	// Define the base input
 	var input *Stream[Row]
-	switch v := Q.From.(type) {
-	case *tableName:
-		table, err := findTable(e, v.Name)
-		if err != nil {
-			return nil, err
-		}
-		input = tablestream(v.Name, table.GetRows())
-	case Query:
-		var err error
-		input, err = e.Exec(v)
-		if err != nil {
-			return nil, err
-		}
-	// Empty FROM
-	case nil:
+	src := Q.From
+	switch src.kind {
+	case kindNil:
+		// Empty FROM
 		input = arrstream([]Row{{}})
+	case kindTableName:
+		table, err := findTable(e, src.tn.Name)
+		if err != nil {
+			return nil, err
+		}
+		input = tablestream(src.tn.Name, table.GetRows())
+	case kindSubquery:
+		var err error
+		input, err = e.Exec(*Q.From.q)
+		if err != nil {
+			return nil, err
+		}
 	default:
-		panic(fmt.Errorf("unhandled from type: %s", reflect.TypeOf(v)))
+		panic(fmt.Errorf("unhandled from type: %d", src.kind))
 	}
 
 	// Join other inputs

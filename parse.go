@@ -7,7 +7,7 @@ import (
 
 // Query is a syntax tree that represents a query.
 type Query struct {
-	From      any
+	From      fromspec
 	Joins     []joinspec
 	Filter    expression
 	Selectors []selector
@@ -16,6 +16,31 @@ type Query struct {
 	Limit     struct {
 		Set   bool
 		Value int
+	}
+}
+
+const (
+	kindNil = iota
+	kindTableName
+	kindSubquery
+)
+
+type fromspec struct {
+	kind int
+	q    *Query
+	tn   *tableName
+}
+
+func (s fromspec) String() string {
+	switch s.kind {
+	case kindNil:
+		return ""
+	case kindTableName:
+		return s.tn.String()
+	case kindSubquery:
+		return "(subquery)"
+	default:
+		return "unknown kind"
 	}
 }
 
@@ -81,16 +106,16 @@ func readQuery(b *tokenizer) (Query, error) {
 		}
 	}
 	if b.eati(tKeyword, "FROM") {
-		// Subquery
 		if b.eati(tOp, "(") {
-			var err error
-			result.From, err = readQuery(b)
+			// Subquery
+			q, err := readQuery(b)
 			if err != nil {
 				return result, err
 			}
 			if !b.eati(tOp, ")") {
 				return result, fmt.Errorf("expected ')' after subquery, got %s", b.peek())
 			}
+			result.From = fromspec{kind: kindSubquery, q: &q}
 		} else {
 			// Table name
 			from, err := b.next()
@@ -100,7 +125,7 @@ func readQuery(b *tokenizer) (Query, error) {
 			if from.t != tIdentifier {
 				return result, fmt.Errorf("expected identifier, got %s", from)
 			}
-			result.From = &tableName{from.val}
+			result.From = fromspec{kind: kindTableName, tn: &tableName{from.val}}
 		}
 		result.Joins = readJoins(b)
 	}
