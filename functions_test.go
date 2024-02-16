@@ -12,11 +12,11 @@ func TestFunctions(t *testing.T) {
 		expr   string
 		result any
 	}{
-		{`SUBSTRING( 'back yard',1 ,4 )`, "back"},
-		{`SUBSTRING( 'back yard', -1 , -4 )`, "yard"},
-		{`SUBSTRING( 'back yard', 6 )`, "yard"},
-		{`CARDINALITY(ARRAY[1, 2, 3])`, 3},
-		{`array_contains(array[1,2,3], 2)`, true},
+		{`SUBSTRING( 'back yard',1 ,4 )`, Value{String, "back"}},
+		{`SUBSTRING( 'back yard', -1 , -4 )`, Value{String, "yard"}},
+		{`SUBSTRING( 'back yard', 6 )`, Value{String, "yard"}},
+		{`CARDINALITY(ARRAY[1, 2, 3])`, Value{Int, 3}},
+		{`array_contains(array[1,2,3], 2)`, Value{Bool, true}},
 	}
 	for _, c := range cases {
 		t.Run(c.expr, func(t *testing.T) {
@@ -24,7 +24,7 @@ func TestFunctions(t *testing.T) {
 			if err != nil {
 				t.Fatal(err)
 			}
-			if diff := cmp.Diff(r[0][0].Data.Data, c.result); diff != "" {
+			if diff := cmp.Diff(r[0][0].Data, c.result); diff != "" {
 				t.Fatalf(`%s`, diff)
 			}
 		})
