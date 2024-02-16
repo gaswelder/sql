@@ -80,7 +80,7 @@ func (s *Stream[T]) Consume() ([]T, error) {
 	return groups, nil
 }
 
-func conv[T, U any](s *Stream[T], f func(T) (U, error)) *Stream[U] {
+func mapStream[T, U any](s *Stream[T], f func(T) (U, error)) *Stream[U] {
 	var u U
 	return &Stream[U]{
 		s.name + ".conv",

@@ -223,7 +223,7 @@ func groupByNothing(input *Stream[Row], Q Query) (*Stream[[]Row], error) {
 
 	// select id
 	if hasExpressions {
-		return conv(input, func(r Row) ([]Row, error) {
+		return mapStream(input, func(r Row) ([]Row, error) {
 			return []Row{r}, nil
 		}), nil
 	}
@@ -347,9 +347,12 @@ func orderRows(s *Stream[[]Row], q Query) (*Stream[[]Row], error) {
 	return arrstream(result), nil
 }
 
-func project(groupsStream *Stream[[]Row], Q Query) *Stream[Row] {
-	return conv(groupsStream, func(rows []Row) (Row, error) {
-		exampleRow := rows[0]
+func project(s *Stream[[]Row], Q Query) *Stream[Row] {
+	return mapStream(s, func(group []Row) (Row, error) {
+		var exampleRow Row
+		if len(group) > 0 {
+			exampleRow = group[0]
+		}
 		groupRow := make(Row, 0)
 		for _, selector := range Q.Selectors {
 			// Expand star selectors with full rows
@@ -359,7 +362,7 @@ func project(groupsStream *Stream[[]Row], Q Query) *Stream[Row] {
 				}
 				continue
 			}
-			val, err := selector.expr.eval(exampleRow, rows)
+			val, err := selector.expr.eval(exampleRow, group)
 			if err != nil {
 				return nil, err
 			}
