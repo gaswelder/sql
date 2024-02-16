@@ -10,30 +10,9 @@ import (
 	"github.com/gaswelder/sql"
 )
 
-var formatters = map[string]func([]sql.Row){
-	"j": func(rows []sql.Row) {
-		for _, r := range rows {
-			j, err := rowToJSON(r)
-			if err != nil {
-				panic(err)
-			}
-			fmt.Println(j)
-		}
-	},
-	"t": func(rows []sql.Row) {
-		fmt.Println(sql.FormatRowsAsTable(rows, 100))
-	},
-}
-
 func main() {
-	outputFormat := flag.String("f", "t", "output format (t = table, j = json)")
 	flag.Parse()
 	args := flag.Args()
-	format := formatters[*outputFormat]
-	if format == nil {
-		os.Stderr.WriteString(fmt.Sprintf("unknown output format: '%s'\n", *outputFormat))
-		os.Exit(1)
-	}
 	if len(args) != 2 {
 		os.Stderr.WriteString(fmt.Sprintf("usage: %s <json-file> <query>\n", os.Args[0]))
 		os.Exit(1)
@@ -55,7 +34,13 @@ func main() {
 		os.Stderr.WriteString(err.Error() + "\n")
 		os.Exit(1)
 	}
-	format(rows)
+	for _, r := range rows {
+		j, err := rowToJSON(r)
+		if err != nil {
+			panic(err)
+		}
+		fmt.Println(j)
+	}
 }
 
 func rowToJSON(r sql.Row) (string, error) {
