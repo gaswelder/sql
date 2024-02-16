@@ -35,6 +35,11 @@ type selector struct {
 	Alias string
 }
 
+type as struct {
+	Expr   expression
+	TypeID ValueTypeID
+}
+
 // expression is a node in an SQL expression tree.
 type expression interface {
 	String() string
@@ -51,8 +56,8 @@ type orderspec struct {
 }
 
 type functionkek struct {
-	name string
-	args []expression
+	Name string
+	Args []expression
 }
 
 // columnRef is an expression node that refers to a column.

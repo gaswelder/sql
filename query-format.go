@@ -80,9 +80,9 @@ func (e aggregate) String() string {
 
 func (f functionkek) String() string {
 	b := strings.Builder{}
-	b.WriteString(f.name)
+	b.WriteString(f.Name)
 	b.WriteString("(")
-	for i, a := range f.args {
+	for i, a := range f.Args {
 		if i > 0 {
 			b.WriteString(", ")
 		}
@@ -122,4 +122,8 @@ func (s fromspec) String() string {
 	default:
 		return "unknown kind"
 	}
+}
+
+func (e *as) String() string {
+	return fmt.Sprintf("%s AS %s", e.Expr.String(), getValueTypeName(e.TypeID))
 }

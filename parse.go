@@ -277,6 +277,13 @@ func readExpr0(b *tokenizer) (expression, error) {
 			if err != nil {
 				return nil, err
 			}
+			if b.eati(tKeyword, "AS") {
+				dt, err := b.next()
+				if err != nil {
+					return nil, err
+				}
+				e = &as{e, getTypeID(dt.val)}
+			}
 			args = append(args, e)
 			if !b.eat(tOp, ",") {
 				break

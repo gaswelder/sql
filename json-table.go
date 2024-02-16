@@ -12,7 +12,7 @@ import (
 type jsonStream struct {
 	_init    bool
 	dec      *json.Decoder
-	schema   map[string]ValueType
+	schema   map[string]ValueTypeID
 	firstRow map[string]Value
 }
 
@@ -36,12 +36,12 @@ func (s *jsonStream) init() error {
 
 	// If the data source is empty, treat it as an empty table.
 	if err == io.EOF {
-		s.schema = map[string]ValueType{}
+		s.schema = map[string]ValueTypeID{}
 		return nil
 	}
 
 	// Infer types from the first row.
-	schema := map[string]ValueType{}
+	schema := map[string]ValueTypeID{}
 	for k, v := range m {
 		schema[k] = guessType(v)
 	}
@@ -106,7 +106,7 @@ func castToInt(item map[string]any) {
 	}
 }
 
-func guessType(x any) ValueType {
+func guessType(x any) ValueTypeID {
 	switch x.(type) {
 	case string:
 		return String
@@ -157,7 +157,7 @@ func JsonTable(path string) dummy {
 		castToInt(item)
 	}
 
-	extend := func(t1, t2 ValueType) ValueType {
+	extend := func(t1, t2 ValueTypeID) ValueTypeID {
 		if t1 == undefined {
 			return t2
 		}
@@ -170,10 +170,10 @@ func JsonTable(path string) dummy {
 		if t1 == String && t2 == Int {
 			return String
 		}
-		panic(fmt.Errorf("extend %s %s", tn(t1), tn(t2)))
+		panic(fmt.Errorf("extend %s %s", getValueTypeName(t1), getValueTypeName(t2)))
 	}
 
-	schema := map[string]ValueType{}
+	schema := map[string]ValueTypeID{}
 	for _, item := range items {
 		for k, v := range item {
 			schema[k] = extend(schema[k], guessType(v))

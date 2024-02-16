@@ -96,15 +96,15 @@ func evalColumnRef(e *columnRef, x Row, group []Row) (Value, error) {
 }
 
 func evalFunction(f *functionkek, r Row, group []Row) (Value, error) {
-	args := make([]Value, len(f.args))
-	for i, argExpression := range f.args {
+	args := make([]Value, len(f.Args))
+	for i, argExpression := range f.Args {
 		exprResult, err := eval(argExpression, r, group)
 		if err != nil {
 			return exprResult, err
 		}
 		args[i] = exprResult
 	}
-	return function(f.name, args)
+	return function(f.Name, args)
 }
 
 func evalCount(args []expression, rows []Row) (Value, error) {

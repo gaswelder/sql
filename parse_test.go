@@ -108,8 +108,25 @@ func TestParse2(t *testing.T) {
 					Kind: kindTableName,
 					Tn:   &tableName{"t"},
 				},
-				Selectors: []selector{{Expr: &aggregate{Name: "count", Args: []expression{&star{}}}}},
-			}},
+				Selectors: []selector{
+					{Expr: &aggregate{Name: "count", Args: []expression{&star{}}}},
+				},
+			},
+		},
+		{
+			`select CAST('1' AS int)`,
+			Query{
+				From: fromspec{},
+				Selectors: []selector{
+					{Expr: &functionkek{
+						Name: "CAST",
+						Args: []expression{
+							&as{&Value{String, "1"}, Int},
+						},
+					}},
+				},
+			},
+		},
 	}
 	for _, c := range cases {
 		q, err := Parse(c.s)

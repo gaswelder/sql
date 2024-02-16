@@ -15,7 +15,7 @@ func traverse(x any, f func(any) error) error {
 		if err := f(v); err != nil {
 			return err
 		}
-		for _, arg := range v.args {
+		for _, arg := range v.Args {
 			if err := traverse(arg, f); err != nil {
 				return err
 			}

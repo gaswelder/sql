@@ -54,6 +54,7 @@ var keywords = []string{
 	"desc", "asc",
 	"or", "and",
 	"array", "true", "false",
+	"int",
 }
 
 func (tr *tokenizer) next() (token, error) {

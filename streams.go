@@ -23,7 +23,7 @@ func (r Row) String() string {
 		if i > 0 {
 			b.WriteString(", ")
 		}
-		b.WriteString(fmt.Sprintf("%s.%s=%s:%s", c.TableName, c.Name, tn(c.Data.Type), c.Data))
+		b.WriteString(fmt.Sprintf("%s.%s=%s:%s", c.TableName, c.Name, getValueTypeName(c.Data.Type), c.Data))
 	}
 	b.WriteString("}")
 	return b.String()

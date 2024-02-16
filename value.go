@@ -1,12 +1,15 @@
 package sql
 
-import "fmt"
+import (
+	"fmt"
+	"strings"
+)
 
-type ValueType int
+type ValueTypeID int
 
 const (
-	undefined ValueType = iota
-	String    ValueType = 1 + iota
+	undefined ValueTypeID = iota
+	String    ValueTypeID = 1 + iota
 	Int
 	Double
 	Bool
@@ -15,11 +18,19 @@ const (
 )
 
 type Value struct {
-	Type ValueType
+	Type ValueTypeID
 	Data any
 }
 
-func tn(t ValueType) string {
+func getTypeID(s string) ValueTypeID {
+	switch strings.ToLower(s) {
+	case "int":
+		return Int
+	}
+	return undefined
+}
+
+func getValueTypeName(t ValueTypeID) string {
 	switch t {
 	case String:
 		return "String"
@@ -44,19 +55,19 @@ func (e Value) String() string {
 
 func (a Value) eq(b Value) (bool, error) {
 	if a.Type != b.Type {
-		return false, fmt.Errorf("can't compare values of different types: %s and %s", tn(a.Type), tn(b.Type))
+		return false, fmt.Errorf("can't compare values of different types: %s and %s", getValueTypeName(a.Type), getValueTypeName(b.Type))
 	}
 	switch a.Type {
 	case String, Int:
 		return a.Data == b.Data, nil
 	default:
-		return false, fmt.Errorf("eq: don't know how to compare values of type %s", tn(a.Type))
+		return false, fmt.Errorf("eq: don't know how to compare values of type %s", getValueTypeName(a.Type))
 	}
 }
 
 func (a Value) lessThan(b Value) (bool, error) {
 	if a.Type != b.Type {
-		return false, fmt.Errorf("can't compare values of different types: %s and %s", tn(a.Type), tn(b.Type))
+		return false, fmt.Errorf("can't compare values of different types: %s and %s", getValueTypeName(a.Type), getValueTypeName(b.Type))
 	}
 	if a.Data == nil || b.Data == nil {
 		return false, nil
@@ -67,7 +78,7 @@ func (a Value) lessThan(b Value) (bool, error) {
 	case Double:
 		return a.Data.(float64) < b.Data.(float64), nil
 	default:
-		return false, fmt.Errorf("lessThan: don't know how to compare values of type %s", tn(a.Type))
+		return false, fmt.Errorf("lessThan: don't know how to compare values of type %s", getValueTypeName(a.Type))
 	}
 }
 
