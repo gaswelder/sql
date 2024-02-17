@@ -24,10 +24,7 @@ func TestParse2(t *testing.T) {
 		{
 			`select id from app`,
 			Query{
-				From: fromspec{
-					Kind: kindTableName,
-					Tn:   &tableName{"app"},
-				},
+				From: &tableName{"app"},
 				Selectors: []selector{
 					{Expr: &columnRef{Column: "id"}},
 				},
@@ -36,10 +33,7 @@ func TestParse2(t *testing.T) {
 		{
 			`select count(*) from t`,
 			Query{
-				From: fromspec{
-					Kind: kindTableName,
-					Tn:   &tableName{"t"},
-				},
+				From: &tableName{"t"},
 				Selectors: []selector{
 					{Expr: &aggregate{Name: "count", Args: []expression{&star{}}}},
 				},
@@ -48,7 +42,7 @@ func TestParse2(t *testing.T) {
 		{
 			`select CAST('1' AS int)`,
 			Query{
-				From: fromspec{},
+				From: nil,
 				Selectors: []selector{
 					{Expr: &functionkek{
 						Name: "CAST",

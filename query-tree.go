@@ -2,7 +2,7 @@ package sql
 
 // Query is a syntax tree that represents a query.
 type Query struct {
-	From      fromspec
+	From      any
 	Joins     []joinspec
 	Filter    expression
 	Selectors []selector
@@ -12,18 +12,6 @@ type Query struct {
 		Set   bool
 		Value int
 	}
-}
-
-const (
-	kindNil = iota
-	kindTableName
-	kindSubquery
-)
-
-type fromspec struct {
-	Kind int
-	Q    *Query
-	Tn   *tableName
 }
 
 type tableName struct {

@@ -47,7 +47,7 @@ func readQuery(b *tokenizer) (Query, error) {
 			if !b.eati(tOp, ")") {
 				return result, fmt.Errorf("expected ')' after subquery, got %s", b.peek())
 			}
-			result.From = fromspec{Kind: kindSubquery, Q: &q}
+			result.From = &q
 		} else {
 			// Table name
 			from, err := b.next()
@@ -57,7 +57,7 @@ func readQuery(b *tokenizer) (Query, error) {
 			if from.t != tIdentifier {
 				return result, fmt.Errorf("expected identifier, got %s", from)
 			}
-			result.From = fromspec{Kind: kindTableName, Tn: &tableName{from.val}}
+			result.From = &tableName{from.val}
 		}
 		result.Joins = readJoins(b)
 	}

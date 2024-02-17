@@ -153,19 +153,6 @@ func (t tableName) String() string {
 	return t.Name
 }
 
-func (s fromspec) String() string {
-	switch s.Kind {
-	case kindNil:
-		return ""
-	case kindTableName:
-		return s.Tn.String()
-	case kindSubquery:
-		return "(subquery)"
-	default:
-		return "unknown kind"
-	}
-}
-
 func (e *as) String() string {
 	return fmt.Sprintf("%s AS %s", e.Expr.String(), getTypeName(e.TypeID))
 }
